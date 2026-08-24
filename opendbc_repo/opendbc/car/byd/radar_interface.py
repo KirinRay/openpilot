@@ -1,462 +1,425 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-BYD Tang DM MRR 雷达 -- 增强版 (V001 硬解码 + V9/仓库原版 KF 距离滤波 + V6 b5 速度帧识别)
+BYD 唐DM 车内雷达 (Continental ARS4xx) — 基于 DBC (u_radar) 解码
+================================================================================
+★ 2026-08-22 深度简化版: 职责回归本源 = 纯解析 + 当帧如实输出 + trackId稳定 + 准确数据
+  🔴 删掉所有"越俎代庖"的决策逻辑(原版抄CP还抄错的地方):
+     - 消失延迟保持 (前车缺席还保持旧点 → CP该自己sticky处理)  删除
+     - Main抖动容错注入 (虚拟Main用旧距离挂假点 → 起步慢元凶)  删除
+     - _park_idle / 低速跳过池槽 (替CP判断低速该不该报目标)    删除
+     - self.pts持久缓存 (旧点残留15帧 → CP误判前方静止车)      删除
+     - yRel平滑限幅 (CP自己有|ΔyRel|断轨判断)                  删除
+  ✅ 保留并做好radar_interface该做的:
+     - CAN解析: 0x109主目标 + 0x380池A多目标 + 0x340方位 → 当帧真实目标
+     - trackId稳定: 同一槽持续同一trackId (CP Track.update计数需要)
+     - 准确数据: dRel(3-120m真实) yRel(实测方位) vRel(即时差分参考)
+     - 当帧如实输出: 当帧有啥输出啥, 无就不输出(不做假前车)
 
-融合多个已验证版本的优点 (基于真车数据 byd_real_data_20260810 验证):
+【上下级接口契约】 (与 card.py 严格对应)
+  L114:  RadarInterface(self.CI.CP)                    → __init__(self, CP, CP_SP=None)
+  L198:  RD = self.RI.update_carrot(CS.vEgo, CS.aEgo, rcv_time, can_list)  → 4参数签名
+  L249:  tracks_msg.valid = not any(RD.errors.to_dict().values())
+  L250:  tracks_msg.liveTracks = RD
 
-[V001 基础 - 保留] 纯硬解码, 不依赖 DBC:
-  协议: Continental ARS4xx, CAN Bus 1, 0x380-0x3FF, 每 slot 4 子地址
-  ★ 2026-08-11 逆向修正: 目标0 = 0x380-0x383 (4连续地址)
-    - 无前车时 0x380-0x387 全是空闲模板帧 (dat[3]=255 等)
-    - 有前车时只有 0x380-0x383 有真实数据 (0x384-0x387 仍空闲)
-    - **距离 = 0x380[3] (dat[3]) 单字节, d = 0.4244*dat[3] + 17.79**
-    - 跨段一致(段1/2/3 corr 0.63-0.85), 分箱单调(22→102m), 优于旧16bit+DT表
-  (旧 V001 假定 dRel=d[2]<<8|d[3] 16bit, 实际段2/3几乎失效, 已修正)
+radard 消费 (CP selfdrive/controls/radard.py):
+  L223:  ar_pts = {pt.trackId: [pt.dRel, pt.yRel, pt.vRel]}
+  Track.update → cnt累积 → alive → get_lead(视觉prob>0.5 → match / low_speed_override)
+  🔴 CP自己处理: sticky(消失保持), KF(速度), low_speed_override(低速选择), |ΔyRel|断轨
+     radar_interface只喂当帧真实目标, 不替CP做任何决策
 
-[V9/仓库原版 补充] KF 距离滤波 (SimpleKalmanFilter + LowPassFilter):
-  真车验证 (0x380 主目标 53 帧): dRel 平滑度提升 34.9%, 均值漂移仅 0.6m (几乎不失真)
-  - 马氏距离门控 (chi2>25 拒绝异常)
-  - 连续 5 帧被拒重置
-  - 加速度限幅防突变
-  - vRel 用轻量 LPF (tau 按 v_ego 分级, 不用 V9 的伪速度, 避免符号翻转失真)
-
-[V6 补充] b5 速度帧识别:
-  b5=3 速度帧优先, 降级 b5=251 dist2 (V001 假定 sub2 是 vRel, 增强后更健壮)
-
-
-[V2 补充 2026-08-16 真车100%解码分析 byd_real_data_20260815]
-  位级逆向 (seg100 高速巡航 855帧/地址):
-  - 距离 = 单字节 dat[3] (corr=1.00), 排除 16bit 编码 (byte2<<8|byte3 corr=0.06)
-  - byte[1] = 16进制滚动码 (步长17, 值0/17/34/.../255, 低4位0-15递增循环), 4子地址共享
-  - 0x380 尾帧: byte[5]=0x80, byte[6]=0, byte[7]=28恒定; byte[2]=0x74-0x78缓变(时间戳/精度)
-  - 0x382 的 b5=3 速度帧极少(1/855), 速度帧集中在 0x381/0x385; 0x382 byte[3]=250 高频
-  - slot结构: slot0(0x380)主目标+slot1(0x384)第二目标(距离比1.58x), slot2/3(0x388/0x38C)空闲
-  - 静止时雷达几乎不测距 (seg0 仅5帧有效), 行驶中正常 (641帧) ← ARS4xx 特性
-  - 纵向 lead 主要来自视觉(modelV2), 雷达目标仅辅助 (radard lead radar来源=0)
-
-[V2.1 深挖补充 2026-08-15 21:22, realdata 5段深入] 每字节最终作用 (100%定性):
-  dat[0] 独立递增计数器 (~894/s, 雷达内部时钟, 非噪声/非checksum)
-  dat[1] yRel 横向位置 (signed*0.02)
-  dat[2] 相位递减计数器 + vRel符号位(bit7)
-  dat[3] dRel 距离 (0.4244*x+17.79)
-  dat[4] 相位递减计数器 (步长8倍数, 模256, 与距离无关)
-  dat[5] 距离区间/追踪状态标记 (非帧类型, 目标远近切换, b5=63空闲)
-  dat[6] 状态位 (1正常/2偶发/3罕见/0空闲)
-  dat[7] 追踪状态标记 (7常规/9新目标确认/切换)
-  关键结论: 无 checksum 字段 (XOR/SUM 全探测失败), 帧校验靠 byte[1] 滚动码;
-  byte[0] 与 byte[1] 是两个独立计数器 (corr=0.036); 无目标分类字段 (无 Class/DynProp/RCS);
-  纵向控制只需 dRel/yRel/vRel, 已 100% 破译, 功能完整
-
-基于 2026-08-11 多版本分析补写 (用户: "汇总优点, 编写雷达文件补充")
-
-[2026-08-17 关键修复 (真机+全量57万配对验证)]
-  - pt.measured=True: 致命, 否则 radard Track.cnt 恒0 → alive_tracks空 → 雷达从不被选中 (UI不显示)
-  - pt.vLead=v_ego+vRel: radard vel_sane 依赖
-  - vRel 改 dRel 差分+中值滤波: 全地址分析0x380-0x3FF证实无直接速度字段(相关<0.22);
-    旧 CAN 解码(0x382 dat[3]=250→饱和±35)废弃
-  - 同一目标(差<5m)12万配对: corr 0.91-0.92, 斜率0.84-0.88, RMSE~2.3m → 距离解码准确
+【DBC 解码源】 (u_radar.dbc v3补充, CANParser读取, 公式DBC处理)
+  MainDist  (0x109)  主目标距离     0.5*b7-4
+  AzimB7    (0x340)  方位角(128中心) 0x340.b7 (弃用347/34A: 实测恒定-0°无效)
+  dRel_slot0-3 (0x380/384/388/38C) 池A槽距离 + type_TA0-3
+  dRel_slot4/5 (0x390/394) 池A扩展槽(无type)
+  池B (0x3C8-3CE) 禁用: 0.4244公式实证不可靠
 """
-
+import math
 import numpy as np
-from collections import deque
+from typing import List, Tuple, Dict, Optional
+from opendbc.can import CANParser
 from opendbc.car.interfaces import RadarInterfaceBase
 from opendbc.car.structs import RadarData
 
-CAN_BUS = 1
-DREL_OFFSET = 1.52          # 雷达相对摄像头物理偏移（米）
-MAX_OBJECTS = 10
-NOT_SEEN_TIMEOUT = 99       # ~3秒（99帧@33Hz 雷达？以实际帧率计算）
-_DREL_CLIP = (3.0, 150.0)
-_VREL_CLIP = (-35.0, 35.0)
-_YREL_CLIP = (-5.0, 5.0)
-
-# --- 2026-08-11 逆向确认: 距离编码 d = DREL_COEF*0x380[3] + DREL_INTERCEPT ---
-# 多段真车数据(段1/2/3)跨段一致, corr 0.63-0.85, 分箱单调22→102m
-DREL_COEF = 0.4244
-DREL_INTERCEPT = 17.79
-
-
-# --- V2: byte[1] 16进制滚动码校验 (真车逆向 2026-08-16) ---
-# 0x380-0x383 4子地址 byte[1] 同步: 值0/17/34/.../255 (步长17), 低4位0-15递增循环
-# 用于过滤杂帧/错位帧, 保证同一条雷达消息的4组数据来自同一帧
-def _check_rollcode(frames: dict) -> bool:
-    """校验 4 子地址 byte[1] 低4位滚动码一致 (0-15循环)"""
-    if not frames:
-        return False
-    codes = set()
-    for addr in (0x380, 0x381, 0x382, 0x383):
-        dat = frames.get(addr)
-        if dat is None or len(dat) < 2:
-            continue
-        codes.add(dat[1] & 0x0F)  # 低4位
-    # 至少2个子地址一致才认可 (正常4个全一致)
-    return len(codes) <= 2
-
-# --- V6: b5 帧类型定义 ---
-B5_SPEED = 3       # 速度帧: signed(b3) * 0.2778 m/s
-B5_DISTANCE = 251  # 距离帧 (dist2)
-
-# --- V9: KF 参数 (真车验证保守取值) ---
-KF_SIGMA_A = 0.15   # 过程噪声 (加速度噪声)
-KF_R = 0.5          # 距离观测方差 (m^2)
-KF_GATE = 25.0      # 马氏距离门控阈值 (chi2 1DOF 99%)
-KF_RESET_CNT = 5    # 连续拒绝帧数超过则重置
-KF_MAX_ACCEL = 2.0  # vRel 加速度限幅 (m/s^2)
-KF_TAU_LOW = 0.5    # vRel LPF tau (v_ego<10)
-KF_TAU_MID = 0.3    # vRel LPF tau (v_ego 10-20)
-KF_TAU_HIGH = 0.2   # vRel LPF tau (v_ego>20)
-
-# b3 类别 (slope, intercept) 分段线性 DT 表（C3 真车重拟合，偏差 +0.6m）
-_DT = {
-    51:  (0.000500, 44.5675),
-    67:  (0.000400, 37.5935),
-    83:  (0.000200, 37.2011),
-    101: (0.000417, 62.0000),
-    117: (0.000599, 57.9716),
-    118: (0.000500, 85.0000),
-    150: (0.000400, 79.1075),
-}
-
-# 只扫描实际活跃的 Slot 0-3（主目标）
-SLOTS = [{'idx': i, 'base': 0x380 + i * 4} for i in range(4)]
+# ==================== DBC 配置 ====================
+_DBC_NAME = "u_radar"                  # 合并 DBC (原外置 + v3车内补充)
+CAN_BUS = 1                            # 车内雷达总线
+MAX_OBJECTS = 12                       # 最大目标数 (当帧最多输出: 主目标 + 池A全24子地址中近的12个)
+# 🔴 2026-08-22 学 Rick Lan 对话方式: 消失宽限期(帧). 目标消失后保持输出这么多帧,
+#   期内重现有延续(UI不闪/CP能追踪), 超期仍消失才删(前车真走/雷达长无目标时清除).
+#   雷达帧率~20Hz, 10帧≈0.5s. 这是"UI持续显示"与"不卡起步"的平衡点.
+GONE_TIMEOUT = 10
+# 消息地址
+_MAIN_MSG = 0x109
+_AZIM_MSGS = [0x340]  # 方位: 0x340主目标(AzimB7) + SUB帧副目标(AzimSub0-3)
+# 2026-08-24: 主=0x340正前方, 副=各SUB帧b6(AzimSub, 128中心) → 主/副两套方位标准
+# 🔴 2026-08-24 深挖: 池A 只读 base+1 (6槽的 +1 子地址): 0x381/385/389/38D/391/395
+#   base+0 = 离散量化档(17/34/51/67, 非连续距离, 假目标源)  跳过
+#   base+1 = 连续真实距离 + 方位(b6) = 真目标源  ← 唯一信任
+#   base+2/3 = 大多空闲(250/255/4哨兵, 噪声)    跳过
+#   DBC 信号: slot{i}b -> dRel_slot{i}b (0.4244*dat[3]+17.79), AzimSub{i} (b6-128)
+#   base+1 = 连续真实距离 + 方位(b6) = 真目标源  ← 唯一信任
+#   base+2/3 = 大多空闲(250/255/4哨兵, 噪声)    跳过
+#   槽4/5 base+1 (0x391/395) 信号已补 DBC (dRel_slot4b/5b + AzimSub4/5)
+_POOLA_ADDRS = []                              # 6个 base+1 (addr, sig)
+for _i in range(6):
+    _a = 0x381 + _i * 4                        # 0x381/385/389/38D/391/395
+    _sig = 'dRel_slot%d%s' % (_i, 'b')
+    _POOLA_ADDRS.append((_a, _sig))
+_POOLA_SIG = ['dRel_slot0b', 'dRel_slot1b', 'dRel_slot2b', 'dRel_slot3b', 'dRel_slot4b', 'dRel_slot5b']
+# 池B 禁用 (0.4244公式实证不可靠)
+_POOLB_ADDRS = []
+_POOLB_SIG = ['dRel_B3C8', 'dRel_B3C9', 'dRel_B3CA', 'dRel_B3CB', 'dRel_B3CC', 'dRel_B3CD', 'dRel_B3CE']
+# CANParser 注册消息
+_RADAR_MESSAGES = ([(a, 20) for a, _s in _POOLA_ADDRS] + [(m, 20) for m in _POOLB_ADDRS]
+                   + [(_MAIN_MSG, 20)] + [(m, 20) for m in _AZIM_MSGS])
+_TRIGGER_MSG = _MAIN_MSG
 
 
-def _signed(b: int) -> int:
-    return b - 256 if b > 127 else b
+# ==================== 解析层 (CAN → slot_map) ====================
+class RadarDataProcessor:
+    """解析 CAN 原始帧 → slot_map (真实目标), 全部 CANParser 读取"""
+
+    def __init__(self):
+        self.rcp = CANParser(_DBC_NAME, _RADAR_MESSAGES, CAN_BUS)
+        self._updated = set()
+
+    def process_records(self, records) -> Tuple[Dict, bool]:
+        """records → slot_map (当帧真实目标, 无消失延迟/无保持)"""
+        try:
+            vls = self.rcp.update([(0, records)])
+        except Exception:
+            return {}, False
+        self._updated = set(vls)
+        seen_radar = _TRIGGER_MSG in self._updated
+        slot_map = {}
+
+        # ---- 主目标 0x109 (只信任当帧更新, 空闲/缺席不输出) ----
+        # 🔴 2026-08-22: 必须用 self._updated 判断"当帧是否真的更新" — CANParser跨帧保留
+        #   未更新消息的旧值(如0x384缺席但rcp.vl[0x384]保留上帧43m) → 会输出残留假目标.
+        #   只输出当帧实际更新且距离有效的消息; 未更新=该槽本帧无数据=不输出(如实际).
+        if _MAIN_MSG in self.rcp.vl and _MAIN_MSG in self._updated:
+            md = self.rcp.vl[_MAIN_MSG].get('MainDist', 0.0)
+            if md is not None and 3.0 <= md <= 120.0:
+                azim = None
+                if _AZIM_MSGS and _AZIM_MSGS[0] in self._updated:
+                    a = self.rcp.vl[_AZIM_MSGS[0]].get('AzimB7', 0.0)
+                    azim = float(a) if a == a else None  # nan防护
+                slot_map['Main'] = {'dRel': float(md), 'azim': azim, 'src': 'main'}
+
+        # ---- 池A 只读 base+1 (6槽, 2026-08-24 深挖) ----
+        # 🔴 2026-08-24 深挖: base+1(0x381/385/389/38D/391/395) = 连续真实距离+方位(b6)
+        #   base+0 离散量化档(17/34/51/67, 非连续) = 假目标源, 已跳过
+        #   base+2/3 大多空闲(250/255/4哨兵) = 噪声, 已跳过
+        # 保留空闲码过滤: dat[3]=4 -> d=19.5m 空闲哨兵, 跳过硬凑假目标
+        for i, (addr, sig) in enumerate(_POOLA_ADDRS):
+            if addr not in self.rcp.vl or addr not in self._updated:
+                continue  # 当帧未更新 → 该槽本帧无数据
+            d = self.rcp.vl[addr].get(sig, None)
+            if d is None or not (3.0 <= d <= 120.0):
+                continue  # 空闲/超范围 (dat[3]=255/247 -> d≈126/122.6m 超120)
+            # 🔴 空闲码过滤: dat[3]=4 -> d≈19.5m 空闲哨兵, 跳过假目标
+            b3 = round((d - 17.79) / 0.4244)   # 反解 dat[3]
+            if b3 in (4, 247, 255):
+                continue
+            slot_map[addr - 0x380] = {'dRel': float(d), 'type': 0, 'src': 'poolA'}
+
+        # ---- 池B (禁用) ----
+        for i, addr in enumerate(_POOLB_ADDRS):
+            if addr not in self.rcp.vl or addr not in self._updated:
+                continue
+            d = self.rcp.vl[addr].get(_POOLB_SIG[i], None)
+            if d is None or not (3.0 <= d <= 120.0):
+                continue
+            slot_map[f'B{addr:02X}'] = {'dRel': float(d), 'type': 0, 'src': 'poolB'}
+
+        # ---- 跨槽去重 (距离±4m同源槽合并, 保留更近) ----
+        main = slot_map.pop('Main', None)
+        keys = sorted(slot_map.keys(), key=lambda k: slot_map[k]['dRel'])
+        merged = {}
+        used = set()
+        for k in keys:
+            if k in used:
+                continue
+            merged[k] = slot_map[k]
+            for k2 in keys:
+                if k2 in used or k2 == k:
+                    continue
+                if abs(slot_map[k]['dRel'] - slot_map[k2]['dRel']) < 4.0:
+                    used.add(k2)
+        if main is not None:
+            merged['Main'] = main
+        return merged, seen_radar
+
+    def get_azimuth_pairs(self, records) -> list:
+        """收集 (addr, ang) 方位角对: 0x340.b7(AzimB7, 128中心)"""
+        # 2026-08-24: 主目标0x340(AzimB7) + 副目标各SUB帧(AzimSub0-3, b6方位)
+        sig_by_addr = {0x340: 'AzimB7', 0x381: 'AzimSub0', 0x385: 'AzimSub1', 0x389: 'AzimSub2', 0x38D: 'AzimSub3', 0x391: 'AzimSub4', 0x395: 'AzimSub5'}
+        pairs = []
+        for addr in _AZIM_MSGS + [0x381, 0x385, 0x389, 0x38D, 0x391, 0x395]:  # 0x340主 + SUB副(6槽base+1)
+            if addr in self.rcp.vl:
+                ang = self.rcp.vl[addr].get(sig_by_addr.get(addr, 'AzimB7'), 0.0)
+                ang = float(ang) if ang == ang else None
+                if ang is not None:
+                    pairs.append((addr, ang))
+        return pairs
 
 
-def _decode_drel(dat: bytes) -> float | None:
-    """0x380[3] 单字节距离解码（多段真车数据逆向, 2026-08-11 验证）
-
-    决定性结论（radar_final_calib.py / radar_formula_compare.py, 段1/2/3 1950样本）:
-      - 目标0 = 0x380-0x383 (4连续地址), 0x380[3] (dat[3]) 是纵向距离
-      - 跨段标定: 段1/2/3 斜率 0.39/0.41/0.43 高度一致, corr 0.63-0.85
-      - 分箱单调: dat[3]=0-20→22m, 20-40→31m, ..., 200-255→102m (教科书级单调)
-      - 公式: d = 0.4244 * dat[3] + 17.79 (corr 0.718)
-      - 新公式 vs 旧16bit+DT表: 段1 0.733vs0.486, 段2 0.633vs0.065, 段3 0.845vs-0.110
-      - 有效样本 432-789 vs 旧 72-123 (旧DT表泛化极差)
-    dat[3] 语义:
-      - dat[3]>=0xf0 (255) = 空闲/无目标/有效标志高字节 → None (视觉接管)
-    """
-    if len(dat) < 4:
-        return None
-    b3 = dat[3]
-    if b3 >= 0xf0:  # 255 空闲/无目标
-        return None
-    d = DREL_COEF * b3 + DREL_INTERCEPT
-    return d if _DREL_CLIP[0] <= d <= _DREL_CLIP[1] else None
-
-
-def _decode_yrel(dat: bytes) -> float:
-    """sub1 帧 yRel（横向偏移，±5m）"""
-    if len(dat) < 2:
-        return 0.0
-    y = _signed(dat[1]) * 0.02
-    return max(min(y, _YREL_CLIP[1]), _YREL_CLIP[0])
-
-
-
-def _signed_vrel(dat: bytes, byte_idx: int = 2) -> float:
-    """V3: vRel 符号位在 byte[2]&0x80 (真车逆向 2026-08-16)
-    速度帧 dat[3] 永远<128 是幅值(0x0E-0x3F), 真实正负号在 byte[2] 最高位:
-      byte[2]&0x80=0 → 正(前车远离/自车快), byte[2]&0x80=1 → 负(前车接近/自车慢)
-    旧 _signed(dat[3]) 丢失负号 (速度帧 dat[3]<128 恒正), 已修正
-    """
-    if len(dat) <= byte_idx:
-        return 0.0
-    mag = dat[3] * 0.2778
-    sign = -1.0 if (dat[byte_idx] & 0x80) else 1.0
-    return max(min(sign * mag, _VREL_CLIP[1]), _VREL_CLIP[0])
-
-
-def _decode_vrel(dat: bytes) -> float:
-    """sub2 帧 vRel（相对速度，±35 m/s，+=远离 -=靠近）
-    V3: 符号位在 byte[2]&0x80"""
-    if len(dat) < 4:
-        return 0.0
-    return _signed_vrel(dat)
-
-
-def _decode_vrel_speed(dat: bytes) -> float | None:
-    """V6+V3: b5=3 速度帧 vRel。非速度帧返回 None
-    V3: 符号位在 byte[2]&0x80 (真车逆向), 不再用 _signed(dat[3]) (速度帧dat[3]<128恒正丢符号)"""
-    if len(dat) < 6:
-        return None
-    if dat[5] != B5_SPEED:
-        return None
-    return _signed_vrel(dat)
-
-
-def _decode_vrel_dist2(dat: bytes) -> float | None:
-    """V6+V3: b5=251 dist2 帧 vRel（降级源）
-    V3: 符号位在 byte[2]&0x80"""
-    if len(dat) < 6:
-        return None
-    if dat[5] != B5_DISTANCE:
-        return None
-    return _signed_vrel(dat)
-
-
-def _build_slot_map(records):
-    """从原始 CAN 记录构建 slot 地址映射（增强: 扫描 slot 0-3 全部子地址, 用 b5 识别速度帧）"""
-    addr_dat = {}
-    seen_radar = False
-    for r in records:
-        if len(r) < 3 or r[2] != CAN_BUS:
-            continue
-        addr = r[0]
-        dat = r[1]
-        if 0x380 <= addr <= 0x38E:
-            seen_radar = True
-            if len(dat) >= 8:
-                addr_dat[addr] = dat
-    # V2: 滚动码校验 — 4子地址 byte[1] 低4位应一致(同一帧), 不一致则丢弃该批(防杂帧)
-    if not _check_rollcode(addr_dat):
-        return {}, False
-    slot_map = {}
-    for s in SLOTS:
-        base = s['base']
-        d = addr_dat.get(base)
-        a = addr_dat.get(base + 1)
-        v = addr_dat.get(base + 2)
-        if d is not None:
-            slot_map[s['idx']] = {'dRel': d, 'yRel': a, 'vRel': v, 'speed': None}
-    # V6: 用 b5 识别速度帧 (扫描每个 slot 的 4 子地址找 b5=3)
-    for sidx, sm in slot_map.items():
-        base = SLOTS[sidx]['base']
-        for off in range(4):
-            dat = addr_dat.get(base + off)
-            if dat is not None and len(dat) > 5 and dat[5] == B5_SPEED:
-                sm['speed'] = dat
-                break
-    return slot_map, seen_radar
-
-
-# ===================== V9: 卡尔曼滤波 + 低通滤波 =====================
-class LowPassFilter:
-    """一阶低通滤波器（用于 vRel 输出平滑）"""
-    def __init__(self, x0: float = 0.0):
-        self.x = float(x0)
-        self._first = True
-
-    def update(self, value: float, dt: float, tau: float) -> float:
-        if dt <= 0 or self._first:
-            self.x = float(value)
-            self._first = False
-            return self.x
-        alpha = dt / (tau + dt)
-        self.x = self.x + alpha * (float(value) - self.x)
-        return self.x
-
-
-class SimpleKalmanFilter:
-    """V9/仓库原版: 简单卡尔曼滤波（状态 x=[d, v_rel], 马氏门控）
-    真车验证 (0x380 主目标): dRel 平滑度 +34.9%, 均值漂移仅 0.6m
-    """
-    def __init__(self, initial_d: float, initial_time: float,
-                 sigma_a: float = KF_SIGMA_A, R: float = KF_R):
-        self.d = float(initial_d)
-        self.v_rel = 0.0
-        self.last_v_rel = 0.0
-        self.P = np.array([[2.0, 0.0], [0.0, 5.0]])
-        self.sigma_a = sigma_a
-        self.R = R
-        self.last_time = float(initial_time)
-        self.reject_count = 0
-        self._min_P = 1e-6
-
-    def predict(self, dt: float) -> None:
-        dt2 = dt * dt
-        F = np.array([[1.0, dt], [0.0, 1.0]])
-        Q = np.array([[0.25 * dt2 * dt2, 0.5 * dt * dt2],
-                      [0.5 * dt * dt2, dt2]]) * self.sigma_a ** 2
-        self.d, self.v_rel = (F @ np.array([self.d, self.v_rel])).tolist()
-        self.P = F @ self.P @ F.T + Q
-
-    def update(self, d_meas: float, v_meas: float | None = None,
-               Rv: float = 1.0) -> bool:
-        """返回 was_updated。马氏门控 (chi2>25 拒绝)"""
-        if not (0.5 <= d_meas <= 200.0):
-            return False
-        x_pred = np.array([self.d, self.v_rel])
-        if v_meas is None:
-            # 1D 距离更新
-            H = np.array([[1.0, 0.0]])
-            S = (H @ self.P @ H.T + self.R)[0, 0]
-            y = np.array([d_meas - (H @ x_pred)[0]])
-            md2 = float(y[0] ** 2 / S)
-            if md2 > KF_GATE:
-                return False
-            K = (self.P @ H.T) / S
-            state = x_pred + (K.flatten() * y[0])
-            self.d, self.v_rel = float(state[0]), float(state[1])
-            I = np.eye(2)
-            self.P = (I - K @ H) @ self.P @ (I - K @ H).T + K * self.R * K.T
-            self.P = np.maximum(self.P, self._min_P)
-            return True
-        else:
-            # 2D 距离+速度更新
-            z = np.array([d_meas, float(v_meas)])
-            H = np.eye(2)
-            R_mat = np.diag([self.R, float(Rv)])
-            S = H @ self.P @ H.T + R_mat
-            y = z - x_pred
-            invS = np.linalg.inv(S)
-            md2 = float(y.T @ invS @ y)
-            if md2 > KF_GATE:
-                return False
-            K = self.P @ H.T @ invS
-            state = x_pred + K @ y
-            self.d, self.v_rel = float(state[0]), float(state[1])
-            I = np.eye(2)
-            self.P = (I - K @ H) @ self.P @ (I - K @ H).T + K @ R_mat @ K.T
-            self.P = np.maximum(self.P, self._min_P)
-            return True
-
-    def adjust_noise(self, v_ego: float) -> None:
-        """按自车速度分级噪声（保守）"""
-        if v_ego > 25.0:
-            self.sigma_a, self.R = 0.12, 1.2
-        elif v_ego > 15.0:
-            self.sigma_a, self.R = 0.18, 1.5
-        elif v_ego > 5.0:
-            self.sigma_a, self.R = 0.16, 1.0
-        else:
-            self.sigma_a, self.R = 0.12, 1.2
-
-    def limit_accel(self, dt: float, max_accel: float = KF_MAX_ACCEL) -> None:
-        """限制相对速度突变（平滑，防跳变）"""
-        if dt <= 0:
-            return
-        accel = (self.v_rel - self.last_v_rel) / dt
-        if abs(accel) > max_accel:
-            self.v_rel = 0.7 * self.last_v_rel + 0.3 * self.v_rel
-        self.last_v_rel = self.v_rel
-
-    def reset(self, d_meas: float) -> None:
-        """连续拒绝后重置（V9 机制）"""
-        self.d = float(d_meas)
-        self.v_rel = 0.0
-        self.last_v_rel = 0.0
-        self.P = np.array([[2.0, 0.0], [0.0, 5.0]])
-        self.reject_count = 0
-
-
+# ==================== 接口层 (当帧如实输出 + trackId稳定) ====================
 class RadarInterface(RadarInterfaceBase):
+    """BYD 唐DM 车内雷达接口 - 纯解析 + 当帧如实输出 + trackId稳定 + 准确数据
+    🔴 不做消失延迟/容错/低速判断 — 那些是CP(radard)的职责, 雷达只喂当帧真实目标"""
 
     def __init__(self, CP, CP_SP=None):
-        super().__init__(CP)
-        self.updated_messages = set()
-        self._pts_cache = {}
-        self._pts_not_seen = {}
-        # V9: 每 slot 的 KF 和 vRel LPF (按 slot 跟踪)
-        self._kfs = {}
-        self._vrel_lpfs = {}
-        self._last_ts = {}
-        # 2026-08-17: dRel 差分 vRel + measured/vLead 修复
-        self._last_drel = {}   # sidx -> 最近滤波后 dRel (m)
-        self._vrel_hist = {}   # sidx -> deque 差分 vRel (中值滤波)
+        try:
+            super().__init__(CP, CP_SP)
+        except TypeError:
+            super().__init__(CP)
+        self._pts_cache = {}            # 当帧点 (Rick Lan 对话模式)
+        self._pts_not_seen = {}         # {trackId: 消失计数} 宽限保持计数
+        self._sidx_track = {}           # {sidx: trackId} 槽→track 稳定映射 (跨帧保持同一目标同id)
+        self._sidx_last_drel = {}       # {sidx: 上次距离} 供vRel即时差分(兜底)
+        self._sidx_last_ts = {}         # {sidx: 上次时间}
+        self._next_track_id = 2         # trackId 单调递增分配 (2起, 避开Main固定trackId=1)
+        self._last_radar_seen = 0.0
+        self.v_ego = 0.0
+        self._processor = RadarDataProcessor()
+        # 🔴 2026-08-23: 第一目标(Main)持续确认显示机制
+        # Main 固定 trackId=1 (恒定, 永不因消失换ID) → leadOne 持续累积 → UI 稳定显示
+        self._main_track_id = 1
+        self._main_last = None          # Main 最后有效点 (dRel, yRel) 用于宽限保持
+        self._main_last_ts = 0.0        # Main 最后有效时刻(秒)
+        self._main_hold_cnt = 0         # Main 消失保持计数
 
-    def _vrel_tau(self) -> float:
-        """V9: vRel LPF tau 按自车速度分级"""
-        if self.v_ego < 10.0:
-            return KF_TAU_LOW
-        elif self.v_ego < 20.0:
-            return KF_TAU_MID
-        else:
-            return KF_TAU_HIGH
+    # ---------- 数据方法 ----------
+    def _estimate_velocity(self, sidx, d: float, ts: float) -> float:
+        """vRel: 距离差分 (0x109/0x380 无独立速度字段, memory 2026-08-22 实证)
+        🔴 2026-08-23 删 b5==3 速度帧: memory 证伪 b5=3 非相对速度帧(byte2符号位是
+           滚动/抖动, byte3=14是距离高位), 不再用伪速度. 速度交 CP 读总线(视觉 vLead).
+        这里 vRel 仅作距离差分参考 (粗), 不作为主目标速度依据."""
+        prev_d = self._sidx_last_drel.get(sidx)
+        prev_t = self._sidx_last_ts.get(sidx)
+        self._sidx_last_drel[sidx] = d
+        self._sidx_last_ts[sidx] = ts
+        if prev_d is not None and prev_t is not None:
+            dt = max(0.01, min(ts - prev_t, 0.5))
+            raw = (d - prev_d) / dt
+            if abs(raw) < 35.0:
+                return float(np.clip(raw, -35.0, 35.0))
+        return 0.0
 
-    def update(self, can_packets):
-        """can_packets: (ts, [(addr,dat,src)...]) — V001 硬解码 + V9 KF"""
-        self._pts_cache.clear()
+    @staticmethod
+    def _azimuth_to_yrel(offset: float, d_rel: float) -> float:
+        """方位角转横向距离 (有方位就用方位, 无方位=0如实)
+        🔴 2026-08-24 45°最大扫描角: 副目标b6方位每单位 = 45/128 = 0.3516°
+           角度 = 偏移(b6-128) × 45/128; 横向 = 距离 × tan(角度)
+           之前每单位误当1°(tan(offset)*d), 导致远处横向爆炸/旁车位错
+           符号: 副目标off负=左(数学坐标), radard坐标系右正左负 → 取反
+        """
+        if d_rel < 0.1:
+            return 0.0
+        angle_deg = offset * (45.0 / 128.0)
+        yrel = math.tan(math.radians(angle_deg)) * d_rel
+        return float(np.clip(-yrel, -10.0, 10.0))   # 取反: 右正左负(视觉/radard)
 
-        if not can_packets or not isinstance(can_packets[0], tuple) or len(can_packets[0]) < 2:
+    # ---------- 主接口 (card.py 调用) ----------
+    def update_carrot(self, v_ego: float, a_ego: float, ts: float, can_list) -> Optional[RadarData]:
+        """雷达更新 - Rick Lan 对话模式: 当帧解析进 _pts_cache, 合并进 self.pts(持久),
+        消失宽限 GONE_TIMEOUT 保持让UI不闪/CP追踪, 超期清除不卡起步"""
+        self.v_ego = float(v_ego)
+        self._pts_cache = {}   # 当帧点清空 (准备装本帧新解析目标)
+
+        if not can_list or not isinstance(can_list[0], tuple) or len(can_list[0]) < 2:
             return None
+        records = can_list[0][1]
+        now_s = can_list[0][0] / 1e9 if can_list[0][0] else ts
 
-        ts = can_packets[0][0]
-        records = can_packets[0][1]
-        slot_map, seen_radar = _build_slot_map(records)
+        try:
+            slot_map, seen_radar = self._processor.process_records(records)
+        except Exception:
+            return None
+        if seen_radar:
+            self._last_radar_seen = now_s
+
+        # 🔴 2026-08-23 删 b5==3 速度帧扫描 (memory 2026-08-22 证伪: 非相对速度帧)
+
+        # 清理 vRel差分历史: 用【时间超时】而非"当帧没见"判断 → 避免雷达短暂丢帧(某帧slot_map空)
+        #   就清空所有差分历史 → 下帧目标重现变"第一帧" → vRel=0 → CP vel_sane匹配失败 → UI不显示雷达
+        # 🔴 2026-08-22 修复: 原逻辑 `if sidx not in slot_map: pop` 在slot_map空帧清空全部历史,
+        #   vRel恒0. 改用 now_s - last_ts > 0.5s 才清(0x109~20Hz, >0.5s=真消失, 差分无意义)
+        stale_keys = [s for s in self._sidx_last_ts if (now_s - self._sidx_last_ts[s]) > 0.5]
+        for sidx in stale_keys:
+            self._sidx_last_drel.pop(sidx, None)
+            self._sidx_last_ts.pop(sidx, None)
+
+        # 当帧真实目标排序: Main优先 → 池A(按距离)
+        slot_keys = []
+        if 'Main' in slot_map:
+            slot_keys.append('Main')
+        pool_keys = sorted([k for k in slot_map if k != 'Main'], key=lambda k: slot_map[k]['dRel'])
+        slot_keys += pool_keys[:max(0, MAX_OBJECTS - 1)]
+
+        # 方位角分配 (2026-08-24: 主/副两套标准)
+        #   主目标(Main) = 0x340 AzimB7 (正前方)
+        #   副目标(池槽) = 各自 SUB 帧 AzimSub (b6方位, sidx=addr-0x380 精确匹配)
+        azim_by_sidx = {}
+        az_pairs = self._processor.get_azimuth_pairs(records) if records else []
+        # 主目标方位: 0x340
+        main_az = next((a for _addr, a in az_pairs if _addr == 0x340), None)
+        if main_az is not None and 'Main' in slot_keys:
+            azim_by_sidx['Main'] = main_az
+        # 副目标方位: 各 SUB 帧 AzimSub, 按 sidx(addr-0x380) 精确匹配
+        azim_by_i = {addr - 0x380: ang for addr, ang in az_pairs if addr != 0x340}
+        for k in pool_keys:
+            # k 是整数槽索引 (addr-0x380) → 直接匹配
+            if isinstance(k, int) and k in azim_by_i:
+                azim_by_sidx[k] = azim_by_i[k]
+            # 非整数sid或无法匹配: 用0x340(正前方)保守, 不臆造
+
+        # 构建当帧输出 (Rick Lan 对话模式: 当帧点进 _pts_cache)
+        # 🔴 2026-08-22 学 Rick Lan 对话方式: 目标消失后不立即删, 宽限保持让UI不闪/CP能追踪
         track_count = 0
-
-        for sidx in sorted(slot_map.keys()):
+        self._pts_cache = {}
+        for sidx in slot_keys:
             if track_count >= MAX_OBJECTS:
                 break
             sm = slot_map[sidx]
-            d = _decode_drel(sm['dRel'])
-            if d is None:
-                continue  # 空闲/未知 → 视觉接管
+            d = sm.get('dRel')
+            if d is None or d < 0.5:
+                continue
 
-            # ---- V9: KF 距离滤波 (dRel 平滑, 真车验证 +34.9%) ----
-            if sidx not in self._kfs:
-                self._kfs[sidx] = SimpleKalmanFilter(d, ts)
-                self._vrel_lpfs[sidx] = LowPassFilter(0.0)
-                self._last_ts[sidx] = ts
+            # trackId 稳定分配
+            # 🔴 2026-08-23: Main(第一目标)固定 trackId=_main_track_id=1, 永不换;
+            #   池槽(辅助目标)才用 _next_track_id 单调递增分配.
+            if sidx == 'Main':
+                track_id = self._main_track_id
             else:
-                kf = self._kfs[sidx]
-                dt = ts - self._last_ts[sidx]
-                dt = max(0.01, min(dt, 0.2))
-                # V2: 低速(<11km/h)跳过KF避免静态失真, 高速才滤波 (真车验证: 静止/低速KF均值漂移1.74m)
-                if self.v_ego > 3.0:
-                    kf.adjust_noise(self.v_ego)
-                    kf.predict(dt)
-                    ok = kf.update(d, None)  # 1D 距离更新 (不用伪速度, 避免 V9 vRel 失真)
-                    if not ok:
-                        kf.reject_count += 1
-                        if kf.reject_count > KF_RESET_CNT:
-                            kf.reset(d)
-                    else:
-                        kf.reject_count = 0
-                    kf.limit_accel(dt)
-                    self._last_ts[sidx] = ts
-                    d = kf.d  # 用滤波后的距离
-                else:
-                    self._last_ts[sidx] = ts
+                if sidx not in self._sidx_track:
+                    while self._next_track_id in self._sidx_track.values() or self._next_track_id == self._main_track_id:
+                        self._next_track_id += 1
+                    self._sidx_track[sidx] = self._next_track_id
+                    self._next_track_id += 1
+                track_id = self._sidx_track[sidx]
 
-            # ---- 2026-08-17: vRel 改用 dRel 时间差分 + 中值滤波 ----
-            # (彻底全地址分析 0x380-0x3FF 证实无直接速度字段, 全字节/16bit相关<0.22;
-            #  速度必须由距离微分得到, 物理合理: 前车靠近=负, 远离=正)
-            vrel_val = 0.0
-            if sidx in self._last_ts and self._last_ts[sidx] > 0 and sidx in self._last_drel:
-                dt_v = max(0.01, min(ts - self._last_ts[sidx], 0.3))
-                vdiff = (d - self._last_drel[sidx]) / dt_v
-                if abs(vdiff) < 25.0:  # 剔跳变
-                    self._vrel_hist.setdefault(sidx, deque(maxlen=7)).append(vdiff)
-                hist = self._vrel_hist.get(sidx)
-                if hist:
-                    vrel_val = float(np.median(list(hist)))
-            self._last_drel[sidx] = d
+            pt = RadarData.RadarPoint()
+            pt.trackId = track_id
+            pt.dRel = float(d)
 
-            tid = track_count + 1
-            if tid not in self._pts_cache:
-                self._pts_cache[tid] = RadarData.RadarPoint()
-                self._pts_cache[tid].trackId = tid
+            # yRel: 有方位用方位, 无方位=0如实 (不臆造横向)
+            matched_ang = azim_by_sidx.get(sidx)
+            azim = sm.get('azim')
+            if matched_ang is not None:
+                pt.yRel = self._azimuth_to_yrel(matched_ang, d)
+            elif azim is not None:
+                pt.yRel = self._azimuth_to_yrel(azim, d)
+            else:
+                pt.yRel = 0.0
 
-            self._pts_not_seen[tid] = NOT_SEEN_TIMEOUT
-            pt = self._pts_cache[tid]
-            pt.dRel = d
-            pt.yRel = _decode_yrel(sm['yRel']) if sm['yRel'] is not None else 0.0
-            pt.vRel = vrel_val
-            # ---- 2026-08-17 关键修复: measured + vLead (否则 radard 融合失效) ----
-            # measured=True: radard Track.cnt 递增, alive_tracks 非空, track 才能被选中
-            # vLead: 前车绝对速度 = 本车 + 相对 (radard vel_sane 依赖)
-            pt.measured = True
-            pt.vLead = self.v_ego + vrel_val
-            pt.aLead = 0.0
-            pt.aRel = 0.0
-            pt.yvRel = 0.0
+            pt.vRel = self._estimate_velocity(sidx, d, ts)
+            # 🔴 2026-08-22 对齐桌面版(Rick Lan)字段: 每个多目标都输出完整字段,
+            #   CP radard 靠这些做 track 更新/cnt累积/lead选择, 缺字段会 UI 不显示/追踪断
+            for _f, _v in (('measured', True), ('vLead', v_ego + pt.vRel),
+                           ('aLead', 0.0), ('aRel', float('nan')), ('yvRel', 0.0)):
+                try:
+                    setattr(pt, _f, _v)
+                except Exception:
+                    pass
+
+            self._pts_cache[track_id] = pt
             track_count += 1
 
-        # 过期清理（目标消失 NOT_SEEN_TIMEOUT 帧后移除）
-        stale = [k for k in self.pts if k not in self._pts_cache]
-        for k in stale:
-            self._pts_not_seen[k] = self._pts_not_seen.get(k, NOT_SEEN_TIMEOUT) - 1
-            if self._pts_not_seen[k] <= 0:
-                del self.pts[k]
-                self._pts_not_seen.pop(k, None)
+            # 🔴 2026-08-23: 记录 Main 最后有效点 (供消失时宽限保持)
+            if sidx == 'Main':
+                self._main_last = (float(d), float(pt.yRel))
+                self._main_last_ts = now_s
+                self._main_hold_cnt = 0
 
+        # 🔴 2026-08-23: Main 宽限保持 — 第一目标必须"一直确认一直显示".
+        #   当帧 Main 不在 slot_map (0x109 b7 抖动/短时丢失), 但之前出现过且未超时:
+        #   继续输出最后有效 Main 点 (trackId 恒定1, dRel/yRel 用最后值),
+        #   保证 CP 的 leadOne track 持续 alive/累积, UI 稳定显示第一目标.
+        if 'Main' not in slot_map and self._main_last is not None:
+            if (now_s - self._main_last_ts) < GONE_TIMEOUT * 0.05 and self._main_hold_cnt < GONE_TIMEOUT:
+                self._main_hold_cnt += 1
+                pt = RadarData.RadarPoint()
+                pt.trackId = self._main_track_id
+                pt.dRel = self._main_last[0]
+                pt.yRel = self._main_last[1]
+                pt.vRel = 0.0
+                for _f, _v in (('measured', True), ('vLead', self.v_ego),
+                               ('aLead', 0.0), ('aRel', float('nan')), ('yvRel', 0.0)):
+                    try:
+                        setattr(pt, _f, _v)
+                    except Exception:
+                        pass
+                self._pts_cache[self._main_track_id] = pt
+            else:
+                # 超时: Main 真消失, 清除保持状态 (下次重现当新目标)
+                self._main_last = None
+                self._main_hold_cnt = 0
+
+        # 🔴 2026-08-22 学 Rick Lan 对话方式: _pts_cache(当帧) 合并进 self.pts(持久)
+        #   消失宽限 GONE_TIMEOUT: 目标消失后保持输出, 期内重现有延续(UI不闪/CP追踪),
+        #   超期仍消失才删(前车真走/雷达长无目标时清除, 不产生假点卡起步).
+        #   这是"UI持续显示"与"不卡起步"的平衡: 宽限期内闪烁保持, 超限实事求是清除.
+        for _tid in list(self.pts.keys()):
+            if _tid in self._pts_cache:
+                self._pts_not_seen[_tid] = GONE_TIMEOUT   # 重见: 重置宽限
+            else:
+                self._pts_not_seen[_tid] = self._pts_not_seen.get(_tid, GONE_TIMEOUT) - 1
+                if self._pts_not_seen[_tid] <= 0:
+                    del self.pts[_tid]                    # 超宽限: 真正删除
+                    self._pts_not_seen.pop(_tid, None)
+                    # 🔴 2026-08-23: 目标真删除时清理 trackId 映射 (避免 ID 复用混乱)
+                    for _s, _t in list(self._sidx_track.items()):
+                        if _t == _tid:
+                            self._sidx_track.pop(_s, None)
         self.pts.update(self._pts_cache)
 
         ret = RadarData()
-        ret.errors.canError = not seen_radar
+        if (now_s - self._last_radar_seen) > 2.0:
+            ret.errors.canError = True
         ret.points = list(self.pts.values())
         return ret
+
+    def reset(self) -> None:
+        """重置雷达接口"""
+        self.pts = {}
+        self._pts_cache = {}
+        self._pts_not_seen = {}
+        self._sidx_track.clear()
+        self._sidx_last_drel.clear()
+        self._sidx_last_ts.clear()
+        self._next_track_id = 2
+        self._last_radar_seen = 0.0
+        self._main_last = None
+        self._main_last_ts = 0.0
+        self._main_hold_cnt = 0
+
+
+# ==================== 冒烟测试 ====================
+if __name__ == "__main__":
+    from opendbc.car.structs import CarParams
+    inst = RadarInterface(CarParams())
+    # 空闲帧: 应无目标
+    idle = [(0x109, bytes([0, 0, 0, 0, 0, 0, 0, 255]), 1),
+            (0x380, bytes([0, 0, 0, 255, 0, 0, 0, 255]), 1)]
+    rd = inst.update_carrot(0.0, 0.0, 1.0, [(int(1e9), idle)])
+    print(f"空闲帧目标数: {len(list(rd.points))} (应0)")
+    # 真目标帧: 0x109主(46m) + 池A 0x380(39m) + 0x384(60m)
+    real = [(0x109, bytes([0, 0, 0, 0, 0, 0, 0, 100]), 1),
+            (0x380, bytes([0, 0, 0, 50, 0, 0, 0, 7]), 1),
+            (0x384, bytes([0, 0, 0, 60, 0, 0, 0, 9]), 1)]
+    for i in range(3):
+        rd = inst.update_carrot(5.0, 0.0, i + 2.0, [(int(1e9), real)])
+    pts = list(rd.points)
+    print(f"真目标帧目标数: {len(pts)} (应3)")
+    for p in pts:
+        print(f"  track{p.trackId}: dRel={p.dRel:.1f}m yRel={p.yRel:+.2f} vRel={p.vRel:+.1f}")
+    # 前车消失: 前 GONE_TIMEOUT 帧应保持输出(宽限, UI不闪), 超宽限才清除(不卡起步)
+    rd = inst.update_carrot(5.0, 0.0, 5.0, [(int(1e9), idle)])
+    print(f"前车消失第1帧: {len(list(rd.points))}点 (应3, 宽限保持中)")
+    for _ in range(GONE_TIMEOUT):
+        rd = inst.update_carrot(5.0, 0.0, 6.0, [(int(1e9), idle)])
+    print(f"前车消失超宽限后: {len(list(rd.points))}点 (应0, 已清除不卡起步)")
+    print("冒烟测试完成")
