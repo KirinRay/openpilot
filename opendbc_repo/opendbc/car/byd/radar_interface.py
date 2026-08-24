@@ -360,9 +360,14 @@ class RadarInterface(RadarInterfaceBase):
                         pass
                 self._pts_cache[self._main_track_id] = pt
             else:
-                # 超时: Main 真消失, 清除保持状态 (下次重现当新目标)
+                # 超时: Main 真消失, 立即彻底清除 (下次重现当新目标)
+                # 🔴 2026-08-24 用户原则: 对UI显示有好处的保留(0.5s防闪宽限),
+                #   但不影响真实功能 → 撞宽限后同步删 pts 里的 track1,
+                #   不再让 pts 持久缓存额外顶 ~10帧 (~1s假目标, CP会误判前车仍在)
                 self._main_last = None
                 self._main_hold_cnt = 0
+                self.pts.pop(self._main_track_id, None)
+                self._pts_not_seen.pop(self._main_track_id, None)
 
         # 🔴 2026-08-22 学 Rick Lan 对话方式: _pts_cache(当帧) 合并进 self.pts(持久)
         #   消失宽限 GONE_TIMEOUT: 目标消失后保持输出, 期内重现有延续(UI不闪/CP追踪),
@@ -412,10 +417,12 @@ if __name__ == "__main__":
             (0x380, bytes([0, 0, 0, 255, 0, 0, 0, 255]), 1)]
     rd = inst.update_carrot(0.0, 0.0, 1.0, [(int(1e9), idle)])
     print(f"空闲帧目标数: {len(list(rd.points))} (应0)")
-    # 真目标帧: 0x109主(46m) + 池A 0x380(39m) + 0x384(60m)
-    real = [(0x109, bytes([0, 0, 0, 0, 0, 0, 0, 100]), 1),
-            (0x380, bytes([0, 0, 0, 50, 0, 0, 0, 7]), 1),
-            (0x384, bytes([0, 0, 0, 60, 0, 0, 0, 9]), 1)]
+    # 真目标帧: 0x109主(46m) + 池A base+1 0x381(39m) + 0x385(43.3m)
+    # 🔴 2026-08-24: 代码只读 base+1 (0x381/385/389/38D/391/395), 不是 base+0(0x380/384)!
+    #   冒烟测试必须喂 base+1 才有池A输出
+    real = [(0x109, bytes([0, 0, 0, 0, 0, 0, 127, 100]), 1),
+            (0x381, bytes([0, 0, 0, 50, 0, 0, 115, 7]), 1),
+            (0x385, bytes([0, 0, 0, 60, 0, 0, 141, 9]), 1)]
     for i in range(3):
         rd = inst.update_carrot(5.0, 0.0, i + 2.0, [(int(1e9), real)])
     pts = list(rd.points)
