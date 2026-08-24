@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 BYD 唐DM 车内雷达 (Continental ARS4xx) — 基于 DBC (u_radar) 解码
 ================================================================================
@@ -305,15 +305,21 @@ class RadarInterface(RadarInterfaceBase):
             pt.trackId = track_id
             pt.dRel = float(d)
 
-            # yRel: 有方位用方位, 无方位=0如实 (不臆造横向)
-            matched_ang = azim_by_sidx.get(sidx)
-            azim = sm.get('azim')
-            if matched_ang is not None:
-                pt.yRel = self._azimuth_to_yrel(matched_ang, d)
-            elif azim is not None:
-                pt.yRel = self._azimuth_to_yrel(azim, d)
-            else:
+            # yRel: 主目标不参与角度 → 恒0(锁定绝对距离, 小角度忽略不计)
+            # 🔴 2026-08-24 用户语义: 主目标锁定就是绝对(距离), 不参与角度, 小角度忽略
+            #   主目标 b3/AzimB7 微弱方位(90%恒定127正前方) 不用于横向
+            #   只有副目标(池A)才用 45° 方位公式
+            if sidx == 'Main':
                 pt.yRel = 0.0
+            else:
+                matched_ang = azim_by_sidx.get(sidx)
+                azim = sm.get('azim')
+                if matched_ang is not None:
+                    pt.yRel = self._azimuth_to_yrel(matched_ang, d)
+                elif azim is not None:
+                    pt.yRel = self._azimuth_to_yrel(azim, d)
+                else:
+                    pt.yRel = 0.0
 
             pt.vRel = self._estimate_velocity(sidx, d, ts)
             # 🔴 2026-08-22 对齐桌面版(Rick Lan)字段: 每个多目标都输出完整字段,
