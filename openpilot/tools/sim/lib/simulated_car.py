@@ -141,12 +141,30 @@ class SimulatedCar:
       "Counter": self._cnt_cam & 0xF,
     }))
 
+    
+    # RADAR_MRR @ 60Hz (carstate cam parser 需要, BYD_RADAR=1. 0x374/BO_884)
+    # 缺此帧 -> cam parser invalid -> canValid=False -> UI报CAN错误
+    msg.append(self.packer.make_can_msg("RADAR_MRR", 2, {
+      "TargetID": 2, "Type": 3, "LatDist": 0, "LongDist": 100,
+      "IsValid": 1, "Counter": self._cnt_cam & 0xF, "CheckSum": 0,
+    }))
+    
     self._cnt_pt += 1
     self._cnt_cam += 1
 
     # bus1 雷达空闲帧 (Continental ARS4xx, CAN_BUS=1, 0x380-0x3FF, radar_interface.py)
     # dat[3]=0xFF = 无前车; 之前 SP 版本 2026-08-12 同款修复
     msg.append((0x380, bytes([0x07,0x00,0x00,0xFF,0x00,0x00,0x00,0x00]), 1))
+    # bus1 0x109 (radar_interface _TRIGGER_MSG, MainDist=0.5*b7-4)
+    # 缺此帧 -> seen_radar=False -> radarErrors.canError=True -> UI报CAN错误
+    # b7=0 -> MainDist=-4 无效, 无目标但 seen_radar=True
+    # 模拟真实前车: 0x109 MainDist=0.5*b7-4, 前车随速度逼近(25m->5m)
+    # b7 = (dist+4)/0.5; speed=m/s; dist=25-speed*0.8 (clamp 5~25)
+    sim_dist = max(5.0, min(25.0, 25.0 - simulator_state.speed * 0.8))
+    sim_b7 = int(round((sim_dist + 4.0) / 0.5))
+    sim_b7 = max(0, min(255, sim_b7))
+    msg.append((0x109, bytes([0, 0, 0, 0, 0, 0, 0, sim_b7]), 1))
+
 
     self.pm.send('can', can_list_to_can_capnp(msg))
 
