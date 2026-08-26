@@ -2,6 +2,7 @@ import time
 import pyray as rl
 from dataclasses import dataclass
 from openpilot.common.constants import CV
+from openpilot.selfdrive.carrot.deceleration_source import deceleration_source_presentation
 from openpilot.selfdrive.ui.onroad.exp_button import ExpButton
 from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus
 from openpilot.system.ui.lib.application import gui_app, FontWeight
@@ -64,6 +65,7 @@ class Colors:
   GREEN_200 = rl.Color(0, 255, 0, 200)
   GREEN_210 = rl.Color(0, 255, 0, 210)
   BLUE_210 = rl.Color(0, 120, 255, 210)
+  VEHICLE_NAVI_LAVENDER = rl.Color(199, 125, 255, 230)
   RED_200 = rl.Color(255, 0, 0, 200)
   RED_210 = rl.Color(255, 0, 0, 210)
   YELLOW_210 = rl.Color(255, 255, 0, 210)
@@ -72,6 +74,7 @@ class Colors:
   TPMS_LOW = rl.Color(255, 90, 90, 220)
   ORANGE_200 = rl.Color(255, 165, 0, 200)
   ORANGE_230 = rl.Color(255, 165, 0, 230)
+  EXTERNAL_NAVI_ORANGE = rl.Color(244, 172, 54, 230)
   RED_SOLID = rl.Color(255, 0, 0, 255)
 
 
@@ -84,7 +87,7 @@ class SetSpeedOverrideState:
   active: bool
   speed_kph: float
   label: str
-  speed_color_mode: int # 0: white, 1: green, 2: orange
+  speed_color_mode: int # 0: white, 1: eco green, 2: orange, 3: vehicle-navigation blue, 4: external-navigation green
   force_persist: bool
 
 
@@ -118,13 +121,12 @@ class SetSpeedOverride:
       desired_source = ""
 
     if desired_speed is not None and 0 < desired_speed < 200 and desired_speed < set_speed_kph:
-      label = desired_source.strip() or "apply"
-      label = label[:8]  # 너무 길면 UI 깨짐 방지 (원하면 길이 조절)
+      label, speed_color_mode = deceleration_source_presentation(desired_source)
       return SetSpeedOverrideState(
         active=True,
         speed_kph=desired_speed,
         label=label,
-        speed_color_mode=2,
+        speed_color_mode=speed_color_mode,
         force_persist=True,   # 조건 유지되는 동안 계속 표시
       )
 
@@ -296,10 +298,38 @@ class HudRenderer(Widget):
 
     self._draw_date_time(rect)
     self._draw_tpms(rect)
+    self._draw_egpu_badge(rect)
     self._draw_cruise_speed_animation(rect)
 
   def user_interacting(self) -> bool:
     return self._exp_button.is_pressed
+
+  def _draw_egpu_badge(self, rect: rl.Rectangle) -> None:
+    if not ui_state.usbgpu_active:
+      return
+
+    text = "eGPU"
+    font_size = 38
+    text_size = measure_text_cached(self._font_semi_bold, text, font_size)
+    pad_x, pad_y = 18, 8
+    badge_w = text_size.x + pad_x * 2
+    exp_button_left = rect.x + rect.width - UI_CONFIG.border_size - UI_CONFIG.button_size
+    badge = rl.Rectangle(
+      exp_button_left - badge_w - 24,
+      rect.y + 24,
+      badge_w,
+      text_size.y + pad_y * 2,
+    )
+    rl.draw_rectangle_rounded(badge, 0.35, 8, rl.Color(0, 0, 0, 150))
+    rl.draw_rectangle_rounded_lines_ex(badge, 0.35, 8, 3, COLORS.GREEN_210)
+    rl.draw_text_ex(
+      self._font_semi_bold,
+      text,
+      rl.Vector2(badge.x + pad_x, badge.y + pad_y),
+      font_size,
+      0,
+      COLORS.GREEN_210,
+    )
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
     """Draw the MAX speed indicator box."""
@@ -642,6 +672,10 @@ class HudRenderer(Widget):
         ov_color = rl.GREEN
       elif ov.speed_color_mode == 2:
         ov_color = COLORS.ORANGE_230
+      elif ov.speed_color_mode == 3:
+        ov_color = COLORS.VEHICLE_NAVI_LAVENDER
+      elif ov.speed_color_mode == 4:
+        ov_color = COLORS.EXTERNAL_NAVI_ORANGE
       else:
         ov_color = rl.GREEN
 

@@ -35,6 +35,8 @@ VISION_RADAR_FAR_MAX_VLEAD_DELTA_MPS = 10.0
 VISION_RADAR_FAR_CONFIRMATION_S = 0.25
 VISION_ONLY_CORROBORATION_MAX_DPATH_DELTA_M = 2.0
 VISION_ONLY_CORROBORATION_MAX_VLEAD_DELTA_MPS = 20.0
+VISION_CORROBORATED_MIN_OBSERVED_S = 0.25
+VISION_CORROBORATED_MAX_OBSERVATION_GAP_S = 0.15
 VISION_ONLY_RADAR_TRACK_MODE = -2
 VISION_ONLY_CUTIN_HISTORY_S = 0.60
 VISION_ONLY_CUTIN_MIN_HISTORY_S = 0.25
@@ -98,7 +100,8 @@ STATIONARY_CLOSER_HANDOFF_MIN_COST_GAIN = 0.10
 RADAR_ONLY_MOVING_MIN_VLEAD_MPS = STATIONARY_MAX_ABS_VLEAD_MPS
 RADAR_ONLY_MOVING_CONFIRMATION_S = 0.25
 RADAR_ONLY_MOVING_TENTATIVE_CONFIRMATION_S = 0.75
-RADAR_ONLY_MOVING_CORNER_MAX_LONGITUDINAL_ERROR_RATE_MPS = 3.0
+RADAR_ONLY_MOVING_FAR_CORNER_CONFIRMATION_S = 1.0
+RADAR_ONLY_MOVING_CORNER_MAX_LONGITUDINAL_ERROR_RATE_MPS = 2.0
 RADAR_ONLY_MOVING_CLOSER_SWITCH_MIN_GAP_M = 3.0
 RADAR_ONLY_MOVING_CLOSER_SWITCH_MAX_DPATH_M = 0.5
 RADAR_ONLY_MOVING_MAX_DREL_M = 100.0
@@ -670,6 +673,8 @@ class VisionRadarMatcher:
     self._stationary_seed_probability = 0.0
     self._stationary_seed_score = 0.0
     self._stationary_path_outlier_since_s: float | None = None
+    self._observed_since_s: dict[tuple[str, int], float] = {}
+    self._observed_last_s: dict[tuple[str, int], float] = {}
     self._stationary_corner_supported = False
     self._stationary_weak_pair_identity: (
       tuple[int, str, int] | None
@@ -1928,6 +1933,29 @@ class VisionRadarMatcher:
         self._identity(point) == selected_identity
         for point, _, _ in supported
       )
+      radar_only_pending_discontinuous = (
+        selected_identity == self._stationary_pending_identity
+        and selected_has_current_support
+        and self._stationary_seed_probability
+        < STATIONARY_VISION_MIN_PROB
+        and not self._stationary_pending_weak_pair_supported
+        and self._stationary_last_point is not None
+        and self._stationary_last_time_s is not None
+        and not self._stationary_position_continuous(
+          self._stationary_last_point,
+          self._stationary_last_time_s,
+          selected[0],
+          time_s,
+        )
+      )
+      if radar_only_pending_discontinuous:
+        # A persistent raw corner ID is not sufficient evidence by itself.
+        # Roadside reflections can keep the ID while their range jumps by
+        # several metres. Radar-only stationary acquisition must therefore
+        # maintain the same kinematic continuity as a held lead throughout
+        # its confirmation dwell.
+        self._reset_stationary()
+        return None
       if selected_identity != self._stationary_pending_identity:
         carry_vision_supported_handoff = (
           self._stationary_seed_probability
@@ -2266,11 +2294,19 @@ class VisionRadarMatcher:
     if not pending_continuous:
       self._radar_only_moving_pending_identity = None
     self._update_radar_only_moving_longitudinal_history(point, time_s)
-    confirmation_s = (
-      RADAR_ONLY_MOVING_TENTATIVE_CONFIRMATION_S
-      if point.radar_track_state == 1
-      else RADAR_ONLY_MOVING_CONFIRMATION_S
-    )
+    if point.radar_track_state == 1:
+      confirmation_s = RADAR_ONLY_MOVING_TENTATIVE_CONFIRMATION_S
+    elif (
+      point.source.startswith("corner")
+      and point.d_rel > RADAR_ONLY_MOVING_FAR_DREL_M
+    ):
+      # A distant corner-only tunnel/overpass return can look like a moving
+      # vehicle for the first few cycles. Observe one full consistency window
+      # before publishing L1; a mutually visible front point wins source
+      # ranking above, and a vision-supported point uses the regular matcher.
+      confirmation_s = RADAR_ONLY_MOVING_FAR_CORNER_CONFIRMATION_S
+    else:
+      confirmation_s = RADAR_ONLY_MOVING_CONFIRMATION_S
     confirmation_complete = (
       self._radar_only_moving_pending_since_s is not None
       and time_s - self._radar_only_moving_pending_since_s
@@ -2305,6 +2341,7 @@ class VisionRadarMatcher:
     vision: VisionLead | None,
     points: Iterable[RadarPointSnapshot],
     path: Sequence[tuple[float, float]],
+    time_s: float | None,
   ) -> VisionRadarMatch | None:
     """Recover a physical point rejected only by the probabilistic matcher."""
     if (
@@ -2384,6 +2421,17 @@ class VisionRadarMatcher:
         candidate[0].track_id,
       ),
     )
+    if (
+      time_s is not None
+      and math.isfinite(time_s)
+      and point.source.startswith("corner")
+      and abs(point.v_lead - vision.velocity)
+      > max(5.0, abs(vision.velocity) * 0.30)
+      and time_s
+      - self._observed_since_s.get(self._identity(point), time_s)
+      < VISION_CORROBORATED_MIN_OBSERVED_S
+    ):
+      return None
     if abs(point.v_lead) > STATIONARY_MAX_ABS_VLEAD_MPS:
       self.last_identity = self._identity(point)
       self.low_probability_hold_frames = 0
@@ -2750,6 +2798,30 @@ class VisionRadarMatcher:
       if stationary_points is None
       else tuple(stationary_points)
     )
+    if time_s is not None and math.isfinite(time_s):
+      current_identities = {
+        self._identity(point)
+        for point in (*point_values, *stationary_values)
+        if point.measured
+      }
+      for identity in current_identities:
+        last_s = self._observed_last_s.get(identity)
+        if (
+          last_s is None
+          or time_s < last_s
+          or time_s - last_s
+          > VISION_CORROBORATED_MAX_OBSERVATION_GAP_S
+        ):
+          self._observed_since_s[identity] = time_s
+        self._observed_last_s[identity] = time_s
+      stale_identities = tuple(
+        identity
+        for identity, last_s in self._observed_last_s.items()
+        if time_s - last_s > VISION_CORROBORATED_MAX_OBSERVATION_GAP_S
+      )
+      for identity in stale_identities:
+        self._observed_since_s.pop(identity, None)
+        self._observed_last_s.pop(identity, None)
     stationary = self._match_stationary(
       vision,
       stationary_values,
@@ -2807,9 +2879,7 @@ class VisionRadarMatcher:
         return radar_moving
       return regular
     corroborated = self._match_vision_corroborated_radar(
-      vision,
-      stationary_values,
-      path,
+      vision, stationary_values, path, time_s,
     )
     if corroborated is None:
       corroborated = far_corroborated

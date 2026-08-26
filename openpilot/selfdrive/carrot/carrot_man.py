@@ -69,6 +69,7 @@ BROADCAST_NETWORK_ERROR_LOG_INTERVAL = 30.0
 AUTO_ONROAD_TMUX_DELAY_SECONDS = float(os.environ.get("CARROT_AUTO_ONROAD_TMUX_DELAY_SECONDS", "60"))
 CARROT_CAN_ERROR_TMUX_DELAY_SECONDS = float(os.environ.get("CARROT_CAN_ERROR_TMUX_DELAY_SECONDS", "5"))
 CARROT_EXCEPTION_UPLOAD_RETRY_SECONDS = 60.0
+CARROT_EXCEPTION_TMUX_REASONS = ("exception", "log", "tmux_send", "can_error", "spi_error")
 DISCORD_TMUX_FILE_MAX_BYTES = 8 * 1024 * 1024
 EXCEPTION_DISCORD_WEBHOOK_KEY = b"carrot-exception-v1"
 EXCEPTION_DISCORD_WEBHOOK_OBFUSCATED = (
@@ -315,7 +316,6 @@ class CarrotMan:
 
     self.carrot_serv = CarrotServ()
 
-    self.show_panda_debug = False
     self.broadcast_ip = self.get_broadcast_address()
     self.broadcast_port = 7705
     self.carrot_man_port = 7706
@@ -351,9 +351,6 @@ class CarrotMan:
 
     self.carrot_zmq_thread = threading.Thread(target=self.carrot_cmd_zmq, args=[], daemon=True)
     self.carrot_zmq_thread.start()
-
-    self.carrot_panda_debug_thread = threading.Thread(target=self.carrot_panda_debug, args=[], daemon=True)
-    self.carrot_panda_debug_thread.start()
 
     self.carrot_route_thread = threading.Thread(target=self.carrot_route, args=[], daemon=True)
     self.carrot_route_thread.start()
@@ -1065,19 +1062,6 @@ class CarrotMan:
         except Exception:
           pass
 
-  def carrot_panda_debug(self):
-    #time.sleep(2)
-    while True:
-      if self.show_panda_debug:
-        self.show_panda_debug = False
-        try:
-          subprocess.run("/data/openpilot/openpilot/selfdrive/debug/debug_console_carrot.py", shell=True)
-        except Exception as e:
-          print(f"debug_console error: {e}")
-          time.sleep(2)
-      else:
-        time.sleep(1)
-
   def get_all_toggle_values(self):
     toggle_values = {}
 
@@ -1185,8 +1169,6 @@ class CarrotMan:
               can_error_tmux_requested = False
               current_onroad_car_state_seen = False
               current_onroad_radar_state_seen = False
-              if AUTO_ONROAD_DIAGNOSTICS:
-                self.show_panda_debug = True
             else:
               isOnroadCount += 1
               current_onroad_car_state_seen |= can_sm.updated['carState']
@@ -1257,7 +1239,7 @@ class CarrotMan:
             carrot_exception = None
             print("[carrot_man] CAN error tmux canceled after going offroad")
 
-          if carrot_exception in ["exception", "log", "tmux_send", "can_error"] \
+          if carrot_exception in CARROT_EXCEPTION_TMUX_REASONS \
               and pending_tmux_reason is None and now >= pending_tmux_next_attempt_at:
             if self.make_tmux_data():
               pending_tmux_reason = carrot_exception

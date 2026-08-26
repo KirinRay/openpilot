@@ -3,6 +3,8 @@
 - For long-running work, treat user questions, status checks, clarifications, and added in-scope
   requests as interruptions to answer while continuing the active work. Stop an active process or
   abandon the task only when the user explicitly asks to stop, cancel, pause, or replace it.
+- While the `carrot-egpu` branch exists, apply and push each user-requested `carrot-wip` code change
+  to both `carrot-wip` and `carrot-egpu`. Stop this mirroring rule when `carrot-egpu` is removed.
 - Navigation deceleration behavior for the `origin/thftgr/navi-stream` branch is documented in
   `docs/carrot_navi_7713_7714_deceleration.md`.
 - The 7714-only control comparison between `origin/carrot-wip` and `origin/thftgr/navi-stream` is
@@ -32,6 +34,18 @@
   snapshot.
 - Treat the JSON values as raw Params values; for example, `StoppingAccel` is stored in hundredths
   of m/s^2.
+
+# Carrot Dashcam Upload route lookup
+
+- When the user provides a `Carrot Dashcam Upload` block, resolve the local route before doing a
+  broad search. Build the preferred log path as
+  `\\DS1821P\openpilot\routes\<Car name> <DongleId>\<Result segment>\rlog.zst`.
+- Decode presentation escaping before building the path: Markdown `\_` is `_`, URL `%20` is a
+  space, and the result link's final directory name is the route segment.
+- If the exact path is absent, search `\\DS1821P\openpilot\routes` for a vehicle directory ending
+  in the exact dongle ID and then the exact result segment. Prefer `rlog.zst`; use `qlog.zst` only
+  when the full log is unavailable.
+- Treat Upload Time, Branch, and Commit as incident-analysis metadata, not as path components.
 
 # User documentation policy
 

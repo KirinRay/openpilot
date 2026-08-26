@@ -55,6 +55,20 @@ for name in pkg_names:
       continue
     raise
 
+ffmpeg = pkgs[pkg_names.index('ffmpeg')]
+# Newer comma FFmpeg packages use shared libraries, while older AGNOS/device
+# environments can still provide static archives with extra link dependencies.
+_ffmpeg_lib_names = os.listdir(ffmpeg.LIB_DIR) if os.path.isdir(ffmpeg.LIB_DIR) else []
+ffmpeg_shared = any(
+  name.startswith('libavcodec.so') or (name.startswith('libavcodec') and name.endswith('.dylib'))
+  for name in _ffmpeg_lib_names
+)
+ffmpeg_libs = ['avformat', 'avcodec', 'swresample', 'avutil']
+if not ffmpeg_shared:
+  ffmpeg_libs += ['x264', 'z']
+  if arch != "Darwin":
+    ffmpeg_libs += ['va', 'va-drm', 'drm']
+
 
 # ***** enforce a whitelist of system libraries *****
 # this prevents silently relying on a 3rd party package,
@@ -231,70 +245,3 @@ if not _ffmpeg_shared:
   if arch != "Darwin":
     ffmpeg_libs += ['va', 'va-drm', 'drm']
 
-Export('env', 'arch', 'ffmpeg_libs')
-
-# Setup cache dir
-cache_dir = '/data/scons_cache' if arch == "larch64" else '/tmp/scons_cache'
-CacheDir(cache_dir)
-Clean(["."], cache_dir)
-
-# ********** start building stuff **********
-
-# Build common module
-SConscript(['openpilot/common/SConscript'])
-Import('_common')
-common = [_common, 'json11', 'zmq']
-Export('common')
-
-# Build messaging (cereal + msgq + socketmaster + their dependencies)
-# Enable swaglog include in submodules
-env_swaglog = env.Clone()
-env_swaglog['CXXFLAGS'].append('-DSWAGLOG="\\"common/swaglog.h\\""')
-SConscript(['msgq_repo/SConscript'], exports={'env': env_swaglog})
-
-SConscript(['openpilot/cereal/SConscript'])
-SConscript(['opendbc_repo/opendbc/dbc/SConscript'])
-
-Import('socketmaster', 'msgq')
-messaging = [socketmaster, msgq, 'capnp', 'kj',]
-Export('messaging')
-
-
-# Build other submodules
-SConscript(['panda/SConscript'])
-
-# Build rednose library
-SConscript(['rednose/SConscript'])
-
-# Build system services
-SConscript([
-  'openpilot/system/loggerd/SConscript',
-])
-
-if arch == "larch64":
-  SConscript(['openpilot/system/camerad/SConscript'])
-
-# Build openpilot
-SConscript(['third_party/SConscript'])
-
-# Build selfdrive
-SConscript([
-  'openpilot/selfdrive/pandad/SConscript',
-  'openpilot/selfdrive/controls/lib/lateral_mpc_lib/SConscript',
-  'openpilot/selfdrive/controls/lib/longitudinal_mpc_lib/SConscript',
-  'openpilot/selfdrive/locationd/SConscript',
-  'openpilot/selfdrive/modeld/SConscript',
-  'openpilot/selfdrive/ui/SConscript',
-  'openpilot/selfdrive/carrot/realtime/SConscript',
-])
-
-# Build tools
-if arch != "larch64":
-  SConscript([
-    'openpilot/tools/replay/SConscript',
-    'openpilot/tools/cabana/SConscript',
-    # 'openpilot/tools/jotpluggler/SConscript', # VM-adapt: skip jotpluggler (ffmpeg_libs undefined on x86_64)
-  ])
-
-
-env.CompilationDatabase('compile_commands.json')
