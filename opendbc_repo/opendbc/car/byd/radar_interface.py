@@ -100,7 +100,9 @@ class RadarDataProcessor:
         #   只输出当帧实际更新且距离有效的消息; 未更新=该槽本帧无数据=不输出(如实际).
         if _MAIN_MSG in self.rcp.vl and _MAIN_MSG in self._updated:
             md = self.rcp.vl[_MAIN_MSG].get('MainDist', 0.0)
-            if md is not None and 3.0 <= md <= 120.0:
+            # 🔴 2026-08-25 补充: 主目标距离下界 3.0->1.0 (memory实证: 0x109无<2m帧, 最深2.5m,
+            #   无近距离假目标; 3.0会滤掉<3m逼近前车->主目标消失->不刹车根因)
+            if md is not None and 1.0 <= md <= 120.0:
                 azim = None
                 if _AZIM_MSGS and _AZIM_MSGS[0] in self._updated:
                     a = self.rcp.vl[_AZIM_MSGS[0]].get('AzimB7', 0.0)
@@ -188,8 +190,10 @@ class RadarInterface(RadarInterfaceBase):
         # Main 固定 trackId=1 (恒定, 永不因消失换ID) → leadOne 持续累积 → UI 稳定显示
         self._main_track_id = 1
         self._main_last = None          # Main 最后有效点 (dRel, yRel) 用于宽限保持
-        self._main_last_ts = 0.0        # Main 最后有效时刻(秒)
+        self._main_last_ts = 0.0
+        self._main_d_hist = []          # 2026-08-25 补充点2: 清空主目标距离历史        # Main 最后有效时刻(秒)
         self._main_hold_cnt = 0         # Main 消失保持计数
+        self._main_d_hist = []          # 2026-08-25 补充点2: 主目标距离历史 [(ts,d)] 供 dM_dot 滑动窗拟合
 
     # ---------- 数据方法 ----------
     def _estimate_velocity(self, sidx, d: float, ts: float) -> float:
@@ -278,6 +282,29 @@ class RadarInterface(RadarInterfaceBase):
 
         # 构建当帧输出 (Rick Lan 对话模式: 当帧点进 _pts_cache)
         # 🔴 2026-08-22 学 Rick Lan 对话方式: 目标消失后不立即删, 宽限保持让UI不闪/CP能追踪
+        # 🔴 2026-08-25 补充点2: 主目标 dM_dot (滑动窗0.5s最小二乘拟合距离变化率)
+        #   替代即时差分: 0x109的0.5m量化+25Hz, 即时差分测不到逼近(被平滑成0/限幅)
+        #   -> 主目标vRel≈0 -> CP误判前车同速不危险 -> 不刹车根因
+        #   dM_dot<0=距离下降=逼近; 单位m/s (用时序秒); 限幅±15 (0.5m步长/25Hz噪声)
+        dM_dot = 0.0
+        dM_cur = slot_map.get('Main', {}).get('dRel') if 'Main' in slot_map else None
+        if dM_cur is not None and dM_cur >= 1.0:
+            self._main_d_hist.append((now_s, float(dM_cur)))
+            while self._main_d_hist and (now_s - self._main_d_hist[0][0]) > 0.5:
+                self._main_d_hist.pop(0)
+            if len(self._main_d_hist) >= 3:
+                _ts = [t for t, _d in self._main_d_hist]
+                _ds = [d for _t, d in self._main_d_hist]
+                _n = len(_ts)
+                _t0 = _ts[0]
+                _st = sum(t - _t0 for t in _ts)
+                _stt = sum((t - _t0) ** 2 for t in _ts)
+                _sd = sum(d for d in _ds)
+                _std = sum((t - _t0) * d for t, d in zip(_ts, _ds))
+                _den = _n * _stt - _st * _st
+                if abs(_den) > 1e-9:
+                    dM_dot = (_n * _std - _st * _sd) / _den
+                    dM_dot = float(np.clip(dM_dot, -15.0, 15.0))
         track_count = 0
         self._pts_cache = {}
         for sidx in slot_keys:
@@ -321,7 +348,11 @@ class RadarInterface(RadarInterfaceBase):
                 else:
                     pt.yRel = 0.0
 
-            pt.vRel = self._estimate_velocity(sidx, d, ts)
+            if sidx == 'Main' and dM_dot != 0.0:
+                # 补充点2: 主目标 vRel = dM_dot (负=距离下降=逼近; CP语义 vRel<0=逼近)
+                pt.vRel = float(np.clip(dM_dot, -35.0, 35.0))
+            else:
+                pt.vRel = self._estimate_velocity(sidx, d, ts)
             # 🔴 2026-08-22 对齐桌面版(Rick Lan)字段: 每个多目标都输出完整字段,
             #   CP radard 靠这些做 track 更新/cnt累积/lead选择, 缺字段会 UI 不显示/追踪断
             for _f, _v in (('measured', True), ('vLead', v_ego + pt.vRel),
