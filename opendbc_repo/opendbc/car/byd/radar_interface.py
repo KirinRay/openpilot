@@ -42,7 +42,7 @@ from opendbc.car.interfaces import RadarInterfaceBase
 from opendbc.car.structs import RadarData
 
 # ==================== DBC 配置 ====================
-_DBC_NAME = "u_radar"                  # 合并 DBC (原外置 + v3车内补充)
+_DBC_NAME = "byd_han_dmev_2020"                  # 合并 DBC (原外置 + v3车内补充)
 CAN_BUS = 1                            # 车内雷达总线
 MAX_OBJECTS = 12                       # 最大目标数 (当帧最多输出: 主目标 + 池A全24子地址中近的12个)
 # 🔴 2026-08-22 学 Rick Lan 对话方式: 消失宽限期(帧). 目标消失后保持输出这么多帧,

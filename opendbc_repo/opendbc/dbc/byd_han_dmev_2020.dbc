@@ -1,4 +1,4 @@
-VERSION ""
+﻿VERSION ""
 
 
 NS_ :
@@ -33,7 +33,8 @@ NS_ :
 
 BS_:
 
-BU_: XXX
+BU_: XXX RADAR
+
 
 
 BO_ 85 EPB: 8 XXX
@@ -212,7 +213,6 @@ BO_ 1048 BSD_RADAR: 8 XXX
  SG_ LEFT_APPROACH : 9|2@0+ (1,0) [0|1] "" XXX
  SG_ RIGHT_APPROACH : 11|2@0+ (1,0) [0|1] "" XXX
  SG_ APPROACH : 17|1@0+ (1,0) [0|1] "" XXX
-
 VAL_ 578 Gear 4 "D" 2 "R" 3 "N" 1 "P";
 VAL_ 790 AutoFullBeamState 11 "AutoFullBeamActive" 2 "AutoFullBeamInactive";
 VAL_ 790 LeftLaneState 0 "GRAY" 1 "GREEN" 2 "YELLOW" 3 "RED";
@@ -228,3 +228,90 @@ VAL_ 814 EspBehaviour 0 "Softoff" 1 "Fastoff" 2 "Immediateoff" 3 "Initial";
 VAL_ 834 DriveMode 2 "SPORT" 1 "ECO" 0 "SNOW";
 VAL_ 834 PowerMode 3 "HEV" 2 "FORCE_EV" 1 "EV";
 VAL_ 944 BTN_AccUpDown_Cmd 0 "NOTPRESSED" 1 "DOWN_SETSPEED" 3 "UP_RESETSPEED";
+
+BO_ 265 RADAR_MAIN_TARGET: 8 RADAR
+CM_ BO_ 265 " Main target 0x109: MainDist = 0.5*b7 - 4 (VERIFIED 1.1M frames 100%)";
+ SG_ MainDist : 56|8@1+ (0.5,-4) [0|255] "m" RADAR
+
+BO_ 832 RADAR_340: 8 RADAR
+CM_ BO_ 832 " 0x340 b7 azimuth, 128 center (main target bearing)";
+ SG_ AzimB7 : 56|8@1+ (1,-128) [-128|127] "deg" RADAR
+
+BO_ 897 RADAR_381: 8 RADAR
+CM_ BO_ 897 " PoolA slot0 base+1 (0x381): dRel=0.4244*dat[3]+17.79, Azim=b6-128 (VERIFIED)";
+ SG_ AzimSub0 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+ SG_ dRel_slot0b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+
+BO_ 901 RADAR_385: 8 RADAR
+CM_ BO_ 901 " PoolA slot1 base+1 (0x385): dRel=0.4244*dat[3]+17.79, Azim=b6-128 (VERIFIED)";
+ SG_ AzimSub1 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+ SG_ dRel_slot1b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+
+BO_ 905 RADAR_389: 8 RADAR
+CM_ BO_ 905 " PoolA slot2 base+1 (0x389): dRel=0.4244*dat[3]+17.79, Azim=b6-128 (VERIFIED)";
+ SG_ AzimSub2 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+ SG_ dRel_slot2b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+
+BO_ 909 RADAR_38D: 8 RADAR
+CM_ BO_ 909 " PoolA slot3 base+1 (0x38D): dRel=0.4244*dat[3]+17.79, Azim=b6-128 (VERIFIED)";
+ SG_ AzimSub3 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+ SG_ dRel_slot3b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+
+BO_ 913 RADAR_391: 8 RADAR
+CM_ BO_ 913 " PoolA slot4 base+1 (0x391): dRel=0.4244*dat[3]+17.79, Azim=b6-128 (VERIFIED)";
+ SG_ AzimSub4 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+ SG_ dRel_slot4b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+
+BO_ 917 RADAR_395: 8 RADAR
+CM_ BO_ 917 " PoolA slot5 base+1 (0x395): dRel=0.4244*dat[3]+17.79, Azim=b6-128 (VERIFIED)";
+ SG_ AzimSub5 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+ SG_ dRel_slot5b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+
+# ===== 2026-08-27 真实路试补充 (bus1 雷达, 记忆 RADAR_ADDRESS_MAP 完整解码) =====
+# 目标族 0x100-108 (256-264): 心跳/时序, 常量帧
+BO_ 256 RADAR_100: 8 RADAR
+ SG_ Cnt0 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 257 RADAR_101: 8 RADAR
+ SG_ Cnt1 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 258 RADAR_102: 8 RADAR
+ SG_ Cnt2 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 259 RADAR_103: 8 RADAR
+ SG_ Cnt3 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 260 RADAR_104: 8 RADAR
+ SG_ Cnt4 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 261 RADAR_105: 8 RADAR
+ SG_ Cnt5 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 262 RADAR_106: 8 RADAR
+ SG_ Cnt6 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 263 RADAR_107: 8 RADAR
+ SG_ Cnt7 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 264 RADAR_108: 8 RADAR
+ SG_ Cnt8 : 0|8@1+ (1,0) [0|255] "" RADAR
+# 第二目标速度 0x10A (266): b7 = 0.803*b7 - 98.2 (r=0.75)
+BO_ 266 RADAR_10A: 8 RADAR
+CM_ BO_ 266 " 0x10A Second target speed v = 0.803*b7 - 98.2 (VERIFIED)";
+ SG_ SecondVRel : 56|8@1+ (0.803,-98.2) [-100|100] "m/s" RADAR
+# 心跳 0x350-354 (848-852): 纯心跳, b0/b1 计数+滚动码
+BO_ 848 RADAR_350: 8 RADAR
+ SG_ Roll350 : 8|8@1+ (1,0) [0|255] "" RADAR
+BO_ 849 RADAR_351: 8 RADAR
+ SG_ Roll351 : 8|8@1+ (1,0) [0|255] "" RADAR
+BO_ 850 RADAR_352: 8 RADAR
+ SG_ Roll352 : 8|8@1+ (1,0) [0|255] "" RADAR
+BO_ 851 RADAR_353: 8 RADAR
+ SG_ Roll353 : 8|8@1+ (1,0) [0|255] "" RADAR
+BO_ 852 RADAR_354: 8 RADAR
+ SG_ Roll354 : 8|8@1+ (1,0) [0|255] "" RADAR
+# 扩展目标池B 槽0 0x3C8 (968): 距离 b3 = 0.4244*b3 + 17.79 (同池A公式, VERIFIED)
+BO_ 968 RADAR_3C8: 8 RADAR
+CM_ BO_ 968 " PoolB slot0 (0x3C8): dRel = 0.4244*dat[3] + 17.79 (VERIFIED)";
+ SG_ dRel_slotB0 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+# 状态帧 0x301/302 (769/770)
+BO_ 769 RADAR_301: 8 RADAR
+ SG_ Status301 : 0|8@1+ (1,0) [0|255] "" RADAR
+BO_ 770 RADAR_302: 8 RADAR
+ SG_ Status302 : 0|8@1+ (1,0) [0|255] "" RADAR
+# EKU 诊断 0x7FE7A00 (134117888): b1 自车速度广播 (粗)
+BO_ 134117888 EKU_SPEED: 8 RADAR
+ SG_ EgoSpeed : 8|8@1+ (1,0) [0|255] "m/s" RADAR
+

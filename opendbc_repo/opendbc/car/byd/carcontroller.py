@@ -150,30 +150,13 @@ class CarController(CarControllerBase):
 
       mpc_target_accel = CC.actuators.accel
 
+      # 官方逻辑: 直接信任 MPC 目标加速度, 只做安全限幅 (不篡改纵向响应)
+      final_accel = np.clip(mpc_target_accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+
       if CC.longActive:
         stopping = CC.actuators.longControlState == LongCtrlState.stopping
         starting = CC.actuators.longControlState == LongCtrlState.starting
         running = CC.actuators.longControlState == LongCtrlState.pid
-
-        # 官方逻辑: 直接信任 MPC 输出的目标加速度
-        scaled_accel = mpc_target_accel
-
-        # 平滑处理 - 防止加速度突变
-        if hasattr(self, 'last_final_accel'):
-            # 检测MPC的极端跳跃
-            if hasattr(self, 'last_mpc_accel'):
-                mpc_change = abs(mpc_target_accel - self.last_mpc_accel)
-                accel_change_limit = 0.1 if mpc_change > 2.0 else 0.2
-            else:
-                accel_change_limit = 0.25
-
-            accel_diff = scaled_accel - self.last_final_accel
-            if abs(accel_diff) > accel_change_limit:
-                scaled_accel = self.last_final_accel + np.sign(accel_diff) * accel_change_limit
-
-        self.last_mpc_accel = mpc_target_accel
-        final_accel = np.clip(scaled_accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
-        self.last_final_accel = final_accel
 
         # 停车状态逻辑
         if stopping and final_accel < -0.1:
@@ -187,7 +170,6 @@ class CarController(CarControllerBase):
           self.sss = 0
       else:
         final_accel = 0
-        scaled_accel = 0
         self.sss = 0
         self.rfss = 0
 
@@ -200,6 +182,15 @@ class CarController(CarControllerBase):
 
       self.apply_accel_last = final_accel
       self.last_acc_frame = self.frame + 1
+
+    # ACC_HUD_ADAS (0x32D) — 原车 ACC 视觉状态广播帧 (5Hz)
+    # 参考 CP 作者使用的现代 (Hyundai) carcontroller 方法:
+    #   create_acc_opt(SCC13) 在 frame%20==0 且 openpilotLongitudinalControl 时发
+    # 让原车 ACC 认为"ACC 已装备、链路正常"（诱骗原车视觉被 CP 替代）
+    if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:
+      can_sends.append(bydcan.create_hud_adas(self.packer, self.CP, CS.cam_hud,
+                                              CS, CC, CC.longActive, self.mpc_acc_counter))
+
 
     new_actuators = CC.actuators.as_builder()
     new_actuators.torque = self.apply_torque_last / CarControllerParams.STEER_MAX

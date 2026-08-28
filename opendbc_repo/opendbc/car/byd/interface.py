@@ -80,6 +80,8 @@ class CarInterface(CarInterfaceBase):
         #disable simple pt radar due to mpc solver issue in official OP. It works with carrot/sunny/forg.
         if BYD_RADAR:
             ret.radarUnavailable = False
+            # Ported from cp11 (verified 控车): 唐DM = HAN_DM20_RADAR_CAR, 雷达采样周期 0.05s (20Hz CAN1/MRR)
+            ret.radarTimeStep = 0.05
         else:
             ret.radarUnavailable = True #candidate not in PT_RADAR_CAR
 
@@ -123,7 +125,8 @@ class CarInterface(CarInterfaceBase):
         use_experimental_long = candidate in EXP_LONG_CAR
 
         ret.alphaLongitudinalAvailable = use_experimental_long
-        ret.openpilotLongitudinalControl = experimental_long and ret.alphaLongitudinalAvailable
+        # Ported from cp11 (verified 控车): 唐DM 等直接按 EXP_LONG_CAR 开启纵向, 不依赖 experimental_long 参数门控
+        ret.openpilotLongitudinalControl = use_experimental_long
 
         ret.longitudinalTuning.kpBP, ret.longitudinalTuning.kiBP = [[0.], [0.]]
         ret.longitudinalTuning.kpV,  ret.longitudinalTuning.kiV  = [[1.0], [0.]]  # kpV=1.0 实车版验证值(对齐加密备份)
@@ -136,8 +139,8 @@ class CarInterface(CarInterfaceBase):
             ret.autoResumeSng = True
             ret.startingState = True
             ret.startAccel = 0.8
-            ret.stopAccel = -0.5
-            ret.vEgoStarting = 0.2 * CV.KPH_TO_MS
+            ret.stopAccel = -0.3  # Ported from cp11 (verified 控车): 唐DM 停车减速度
+            ret.vEgoStarting = 0.1 * CV.KPH_TO_MS  # Ported from cp11: 起步速度阈值
             ret.vEgoStopping = 0.1 * CV.KPH_TO_MS
             ret.longitudinalActuatorDelay = 0.5
         else:
