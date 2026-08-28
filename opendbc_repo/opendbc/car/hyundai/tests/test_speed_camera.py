@@ -18,9 +18,15 @@ class FakeParams:
     self.read_count = 0
 
   def get_int(self, key):
-    assert key == "VehicleSpeedCameraDistanceTime"
-    self.read_count += 1
-    return self.value
+    if key == "VehicleSpeedCameraDistanceTime":
+      self.read_count += 1
+      return self.value
+    return {
+      "VehicleNaviCurveSpeedFactor": 100,
+      "VehicleNaviCurveCtrlEnd": 3,
+      "AutoCurveSpeedLowerLimit": 30,
+      "AutoNaviSpeedDecelRate": 120,
+    }[key]
 
   def get_bool(self, key):
     if key == "VehicleNaviCanControl":
@@ -37,12 +43,21 @@ def _car_state(distance_time_tenths=60):
   state.vehicleSpeedCameraDistanceTime = CarState._vehicle_speed_camera_distance_time(distance_time_tenths)
   state.vehicleNaviCanControl = False
   state.vehicleNaviSchoolZoneControl = False
+  state.vehicleNaviCurveSpeedFactor = 1.0
+  state.vehicleNaviCurveLowerLimit = 30.0
+  state.vehicleNaviCurveDecelRate = 1.2
+  state.vehicleNaviCurveControlEnd = 3.0
   state.vehicleSpeedCameraParamsCounter = 0
   state.vehicleNaviEvents = []
+  state.vehicleNaviCurves = []
   state.vehicleNaviSegmentTimestamp = 0
+  state.vehicleNaviCurveTimestamp = 0
   state.vehicleNaviProfileTimestamp = 0
   state.vehicleNaviAvailable = False
   state.vehicleNaviRouteResetTimestamp = 0
+  state.vehicleNaviCurveRouteActive = False
+  state.vehicleNaviCurveRouteState = 3
+  state.vehicleNaviRoadClass = 7
   state.vehicleNaviCameraTarget = None
   state.vehicleNaviSpeedZoneActive = False
   state.vehicleNaviSpeedZoneSpeed = 0.0
@@ -51,7 +66,9 @@ def _car_state(distance_time_tenths=60):
   state.vehicleNaviSchoolZoneUsesCameraStatus = False
   state.navi_segment_4b9 = None
   state.navi_position_4b4 = None
+  state.navi_profile_4ba = None
   state.navi_profile_4be = None
+  state.hda_info_4a3 = None
   return state
 
 
@@ -63,6 +80,28 @@ def test_vehicle_speed_camera_distance_is_independent_of_accelerator(gas_pressed
   state.update_speed_limit(ret, speed_limit_cam=True)
 
   assert ret.speedLimitDistance == pytest.approx(300.0)
+
+
+@pytest.mark.parametrize("road_class", (1, 2))
+def test_vehicle_30_kph_camera_control_is_blocked_on_controlled_access_road(road_class):
+  state = _car_state()
+  state.vehicleNaviRoadClass = road_class
+  ret = SimpleNamespace(vEgo=20.0, speedLimit=30.0, gasPressed=False)
+
+  state.update_speed_limit(ret, speed_limit_cam=True)
+
+  assert ret.speedLimit == 30.0
+  assert ret.speedLimitDistance == 0.0
+
+
+def test_vehicle_regular_camera_control_remains_active_on_expressway():
+  state = _car_state()
+  state.vehicleNaviRoadClass = 2
+  ret = SimpleNamespace(vEgo=20.0, speedLimit=60.0, gasPressed=False)
+
+  state.update_speed_limit(ret, speed_limit_cam=True)
+
+  assert ret.speedLimitDistance == pytest.approx(360.0)
 
 
 def test_vehicle_speed_camera_distance_uses_tenths_of_a_second():
@@ -200,6 +239,15 @@ def test_vehicle_navi_profile_decodes_labeled_speed_bump_frame():
   assert CarState._classify_vehicle_navi_profile(profile) == ("bump", 0, 6)
 
 
+def test_vehicle_navi_segment_decodes_functional_road_class():
+  raw = (1 << 24) | (1 << 22) | 123
+  segment = CarState._decode_vehicle_navi_segment({
+    f"BYTE_{i + 1}": byte for i, byte in enumerate(raw.to_bytes(8, "little"))
+  })
+
+  assert segment == {"offset": 123, "calculated_route": 1, "functional_road_class": 1}
+
+
 def test_vehicle_navi_route_recalculation_clears_events():
   state = _car_state()
   state.vehicleNaviCanControl = True
@@ -260,6 +308,75 @@ def test_vehicle_navi_school_zone_follows_vehicle_camera_status():
   assert not state._update_vehicle_navi_events(cp, ret, False)
   assert not ret.schoolZoneActive
   assert not state.vehicleNaviSchoolZoneActive
+
+
+@pytest.mark.parametrize("link_class", (1, 2, 3))
+def test_vehicle_navi_school_zone_is_blocked_by_controlled_access_link_class(link_class):
+  state = _car_state()
+  state.vehicleNaviSchoolZoneControl = True
+  state.hda_info_4a3 = {"LinkClass": link_class}
+  state.navi_profile_4be = {
+    "PROLONG_VALUE": 0x77,
+    "PROLONG_OFFSET": 0,
+    "PROLONG_CYCLIC_COUNTER": 3,
+    "PROLONG_UPDATE": 1,
+    "PROLONG_PROFILE_TYPE": 16,
+  }
+  cp = SimpleNamespace(ts_nanos={"NEW_MSG_4BE": {"PROLONG_VALUE": 1}})
+  ret = SimpleNamespace(speedLimit=30.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, True)
+  assert not ret.schoolZoneActive
+  assert not state.vehicleNaviSchoolZoneActive
+
+
+@pytest.mark.parametrize("road_class", (1, 2))
+def test_vehicle_navi_school_zone_is_cleared_by_controlled_access_road_class(road_class):
+  state = _car_state()
+  state.vehicleNaviSchoolZoneControl = True
+  state.vehicleNaviSchoolZoneActive = True
+  raw = road_class << 24
+  state.navi_segment_4b9 = {f"BYTE_{i + 1}": byte for i, byte in enumerate(raw.to_bytes(8, "little"))}
+  cp = SimpleNamespace(ts_nanos={"NEW_MSG_4B9": {"BYTE_1": 1}})
+  ret = SimpleNamespace(speedLimit=30.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, True)
+  assert state.vehicleNaviRoadClass == road_class
+  assert not ret.schoolZoneActive
+  assert not state.vehicleNaviSchoolZoneActive
+
+
+@pytest.mark.parametrize("road_class", (1, 2))
+def test_vehicle_navi_speed_bump_is_blocked_on_controlled_access_road(road_class):
+  state = _car_state()
+  state.vehicleNaviCanControl = True
+  state.vehicleNaviRoadClass = road_class
+  state.navi_profile_4be = {
+    "PROLONG_VALUE": 6,
+    "PROLONG_OFFSET": 300,
+    "PROLONG_CYCLIC_COUNTER": 3,
+    "PROLONG_UPDATE": 1,
+    "PROLONG_PROFILE_TYPE": 16,
+  }
+  cp = SimpleNamespace(ts_nanos={"NEW_MSG_4BE": {"PROLONG_VALUE": 1}})
+  ret = SimpleNamespace(speedLimit=100.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, False)
+  assert ret.speedBumpDistance == 0.0
+  assert state.vehicleNaviEvents == []
+
+
+def test_vehicle_navi_pending_speed_bump_is_cleared_on_expressway_entry():
+  state = _car_state()
+  state.vehicleNaviCanControl = True
+  state.vehicleNaviEvents = [{"type": "bump", "speed": 0, "kind": 6, "target": 300.0}]
+  state.vehicleNaviRoadClass = 2
+  cp = SimpleNamespace(ts_nanos={})
+  ret = SimpleNamespace(speedLimit=100.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, False)
+  assert ret.speedBumpDistance == 0.0
+  assert state.vehicleNaviEvents == []
 
 
 def test_vehicle_navi_school_zone_explicit_speed_change_clears_cap():
@@ -386,6 +503,128 @@ def test_vehicle_navi_range_average_dbc_decodes_logged_frame():
 
   assert parser.vl["NEW_MSG_4B4"]["POS_OFFSET"] == 13
   assert parser.vl["NEW_MSG_4B4"]["POS_RANGE_AVG_SPEED"] == 92
+
+
+@pytest.mark.parametrize(("raw_value", "expected"), (
+  (511, 0.0),
+  (512, 0.00001),
+  (599, 0.00112),
+  (656, 0.00260),
+  (819, 0.01792),
+  (1023, None),
+))
+def test_adasis_v2_curvature_decoder(raw_value, expected):
+  decoded = CarState._decode_adasis_curvature(raw_value)
+  if expected is None:
+    assert decoded is None
+  else:
+    assert decoded == pytest.approx(expected)
+
+
+def test_vehicle_navi_curve_dbc_decodes_logged_frame():
+  parser = CANParser("hyundai_canfd_generated", [("NEW_MSG_4BA", math.nan)], 0)
+  parser.update([1_000_000_000, [(0x4BA, bytes.fromhex("3901f902ae04206c"), 0)]])
+
+  values = parser.vl["NEW_MSG_4BA"]
+  assert values["PROSHORT_OFFSET"] == 313
+  assert values["PROSHORT_DISTANCE"] == 5
+  assert values["PROSHORT_VALUE_0"] == 599
+  assert values["PROSHORT_VALUE_1"] == 0
+  assert values["PROSHORT_PROFILE_TYPE"] == 1
+
+
+def test_vehicle_navi_curve_profile_publishes_reference_speed_and_distance():
+  state = _car_state()
+  state.vehicleNaviCurveRouteActive = True
+  state.navi_profile_4ba = {
+    "PROSHORT_OFFSET": 313,
+    "PROSHORT_DISTANCE": 5,
+    "PROSHORT_VALUE_0": 599,
+    "PROSHORT_PROFILE_TYPE": 1,
+  }
+  cp = SimpleNamespace(ts_nanos={"NEW_MSG_4BA": {"PROSHORT_VALUE_0": 1}})
+  ret = SimpleNamespace(speedLimit=0.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, False)
+  assert ret.vehicleNaviCurveDistance == pytest.approx(313.0)
+  assert ret.vehicleNaviCurveCurvature == pytest.approx(0.00112)
+  assert ret.vehicleNaviCurveSpeed == pytest.approx(math.sqrt(1.9 / 0.00112) * 3.6)
+  assert ret.vehicleNaviCurveRouteActive
+  assert state.vehicleNaviCurves[0]["span"] == 10.0
+
+
+def test_vehicle_navi_curve_releases_passed_apex_and_uses_following_spot():
+  state = _car_state()
+  state.vehicleNaviCurves = [
+    {"target": 100.0, "span": 10.0, "curvature": 0.01, "speed": 50.0},
+    {"target": 140.0, "span": 10.0, "curvature": 0.004, "speed": 80.0},
+  ]
+  ret = SimpleNamespace()
+  cp = SimpleNamespace(ts_nanos={})
+
+  state.totalDistance = 100.0
+  state._update_vehicle_navi_curve_profile(cp, ret)
+  assert ret.vehicleNaviCurveDistance == 0.0
+  assert ret.vehicleNaviCurveSpeed == 50.0
+
+  state.totalDistance = 100.1
+  state._update_vehicle_navi_curve_profile(cp, ret)
+  assert ret.vehicleNaviCurveDistance == pytest.approx(39.9)
+  assert ret.vehicleNaviCurveSpeed == 80.0
+
+
+def test_vehicle_navi_curve_without_following_spot_releases_after_apex():
+  state = _car_state()
+  state.vehicleNaviCurves = [{"target": 100.0, "span": 10.0, "curvature": 0.01, "speed": 50.0}]
+  ret = SimpleNamespace()
+  cp = SimpleNamespace(ts_nanos={})
+
+  state.totalDistance = 100.1
+  state._update_vehicle_navi_curve_profile(cp, ret)
+  assert ret.vehicleNaviCurveSpeed == 0.0
+
+
+def test_vehicle_navi_curve_skips_only_short_hairpin_speed_spot():
+  state = _car_state()
+  state._add_vehicle_navi_curve({"offset": 100.0, "span": 10.0, "curvature": 0.12288})
+  assert state.vehicleNaviCurves == []
+
+  state._add_vehicle_navi_curve({"offset": 110.0, "span": 10.0, "curvature": 0.04864})
+  assert len(state.vehicleNaviCurves) == 1
+  assert state.vehicleNaviCurves[0]["speed"] == pytest.approx(math.sqrt(1.9 / 0.04864) * 3.6)
+
+
+def test_vehicle_navi_route_recalculation_clears_curve_profile():
+  state = _car_state()
+  state.vehicleNaviCurves = [{"target": 300.0, "curvature": 0.01, "speed": 50.0}]
+  raw = bytes.fromhex("0000b8063110fdff")
+  state.navi_segment_4b9 = {f"BYTE_{i + 1}": byte for i, byte in enumerate(raw)}
+  cp = SimpleNamespace(ts_nanos={"NEW_MSG_4B9": {"BYTE_1": 2}})
+  ret = SimpleNamespace(speedLimit=0.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, False)
+  assert state.vehicleNaviCurves == []
+  assert ret.vehicleNaviCurveSpeed == 0.0
+
+
+def test_vehicle_navi_curve_control_requires_calculated_route():
+  state = _car_state()
+  raw = (1 << 22).to_bytes(8, "little")
+  state.navi_segment_4b9 = {f"BYTE_{i + 1}": byte for i, byte in enumerate(raw)}
+  cp = SimpleNamespace(ts_nanos={"NEW_MSG_4B9": {"BYTE_1": 1}})
+  ret = SimpleNamespace(speedLimit=0.0, speedBumpDistance=0.0, schoolZoneActive=False)
+
+  assert not state._update_vehicle_navi_events(cp, ret, False)
+  assert state.vehicleNaviCurveRouteActive
+  assert ret.vehicleNaviCurveRouteActive
+  assert ret.vehicleNaviCurveRouteState == 1
+
+  state.navi_segment_4b9 = {f"BYTE_{i + 1}": 0 for i in range(8)}
+  cp.ts_nanos["NEW_MSG_4B9"]["BYTE_1"] = 2
+  assert not state._update_vehicle_navi_events(cp, ret, False)
+  assert not state.vehicleNaviCurveRouteActive
+  assert ret.vehicleNaviCurveRouteState == 0
+  assert state.vehicleNaviCurves == []
 
 
 def test_vehicle_navi_stale_range_average_releases_section():

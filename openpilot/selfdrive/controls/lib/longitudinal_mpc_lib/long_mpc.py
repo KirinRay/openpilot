@@ -9,11 +9,7 @@ from openpilot.common.swaglog import cloudlog
 # WARNING: imports outside of constants will not trigger a rebuild
 from openpilot.selfdrive.modeld.constants import index_function
 from openpilot.selfdrive.controls.radard import _LEAD_ACCEL_TAU
-from openpilot.selfdrive.carrot.traffic_stop import (
-  get_traffic_stop_accel_floor,
-  get_traffic_stop_obstacle_distance,
-  should_limit_traffic_stop_accel,
-)
+from openpilot.selfdrive.carrot.traffic_stop import get_traffic_stop_obstacle_distance
 
 if __name__ == '__main__':  # generating code
   from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
@@ -43,6 +39,7 @@ A_EGO_COST = 0.
 J_EGO_COST = 5.0
 A_CHANGE_COST = 200.
 A_CHANGE_COST_STARTING = 10. #30.
+JLEAD_A_CHANGE_COST_MIN = 20.0
 DANGER_ZONE_COST = 100.
 CRASH_DISTANCE = .25
 LEAD_DANGER_FACTOR = 0.8 # 0.75
@@ -77,6 +74,12 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
     return 0.5
   else:
     raise NotImplementedError("Longitudinal personality not supported")
+
+
+def get_jlead_a_change_cost(j_lead, j_lead_factor):
+  factor = float(np.clip(j_lead_factor, 0.0, 1.0))
+  min_cost = float(np.interp(factor, [0.0, 1.0], [A_CHANGE_COST, JLEAD_A_CHANGE_COST_MIN]))
+  return float(np.interp(abs(j_lead), [0.3, 2.0], [A_CHANGE_COST, min_cost]))
 
 
 def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard):
@@ -441,9 +444,8 @@ class LongitudinalMpc:
                                  v_upper)
       cruise_obstacle = np.cumsum(T_DIFFS * v_cruise_clipped) + get_safe_obstacle_distance(v_cruise_clipped, t_follow, comfort_brake, stop_distance)
 
-      # Keep the signal-stop obstacle independent at every distance. Folding it into
-      # cruise_obstacle above 50 m delayed the stationary constraint until late in the stop.
-      traffic_stop_obstacle = get_traffic_stop_obstacle_distance(stop_x, carrot.trafficStopDistanceAdjust)
+      adjust_dist = carrot.trafficStopDistanceAdjust if v_ego > 0.1 else -2.0
+      traffic_stop_obstacle = get_traffic_stop_obstacle_distance(stop_x, cruise_obstacle[0], adjust_dist)
       x2 = traffic_stop_obstacle * np.ones(N+1)
 
       x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle, cruise_obstacle, x2])
@@ -454,21 +456,11 @@ class LongitudinalMpc:
       #elif self.source in ['cruise', 'e2e']:
       #  self.params[:,0] = - COMFORT_BRAKE
 
-      # Limit early signal braking for either signal-related MPC source. A real
-      # lead source bypasses this floor, and the distance-based floor releases
-      # progressively when the stable stop-line estimate leaves less margin.
-      signal_stop_active = getattr(carrot, "traffic_stop_reference_speed_kph", None) is not None
-      if should_limit_traffic_stop_accel(signal_stop_active, self.source):
-        signal_stop_accel_floor = get_traffic_stop_accel_floor(
-          v_ego, getattr(carrot, "traffic_stop_raw_distance", 0.0), stop_distance,
-        )
-        self.params[:,0] = np.maximum(self.params[:,0], signal_stop_accel_floor)
-
       # These are not used in ACC mode
       x[:], v[:], a[:], j[:] = 0.0, 0.0, 0.0, 0.0
 
       if radarstate.leadOne.status:
-        base_a_change_cost = float(np.interp(abs(self.j_lead), [0.3, 2.0], [A_CHANGE_COST, 20]))
+        base_a_change_cost = get_jlead_a_change_cost(self.j_lead, carrot.j_lead_factor)
       else:
         base_a_change_cost = A_CHANGE_COST
 

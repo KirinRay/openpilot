@@ -2,6 +2,29 @@
   "sensitivity": 50,
   "cases": [
     {
+      "id": "k8-2db-56-stopped-motorcycle-leadone-35",
+      "vehicle_folder": "KIA_K8_HEV_1ST_GEN b34d1abb87cce93b",
+      "log": "000002db--6b934dd8b1--56/rlog.zst",
+      "source": "front+corner",
+      "window": [40.70, 41.20],
+      "expected": "clear",
+      "required_lead_one_ids": [35],
+      "scene": "Strong vision range and a distinct closer front-radar track should hand leadOne from the stopped car to the motorcycle without SCC support"
+    },
+    {
+      "id": "k8-2e3-33-close-low-speed-predecel-3423",
+      "vehicle_folder": "KIA_K8_HEV_1ST_GEN b34d1abb87cce93b",
+      "log": "000002e3--e8f3253035--33/rlog.zst",
+      "source": "corner",
+      "window": [21.95, 22.40],
+      "expected": "detect",
+      "human_verified": true,
+      "validation_stage": "predecel",
+      "target_track_ids": [3423],
+      "latest_detection_s": 22.20,
+      "scene": "A moving vehicle cuts in at low traffic speed with weak longitudinal closing; paired front and corner radar should request bounded pre-deceleration before normal leadTwo confirmation"
+    },
+    {
       "id": "ioniq5-4b9-7-corner-predecel-cutin-28",
       "vehicle_folder": "HYUNDAI_IONIQ_5_PE 7f419ed56030e135",
       "log": "000004b9--f989b3c8ec--7/rlog.zst",
@@ -1285,6 +1308,29 @@
       "validation_stage": "lead_two",
       "forbidden_lead_two_ids": [2516],
       "scene": "Black sedan remains in the adjacent left lane while a small quantized inward shift briefly touches the lane-boundary straddle gate"
+    },
+    {
+      "id": "carnival-14a-20-turn-parked-left-22",
+      "vehicle_folder": "KIA_CARNIVAL_4TH_GEN c4dcf95545dafe68",
+      "log": "0000014a--26d45431d5--20/rlog.zst",
+      "source": "front+corner",
+      "window": [22.45, 24.05],
+      "expected": "clear",
+      "human_verified": true,
+      "forbidden_lead_one_ids": [2734],
+      "scene": "A parked truck on the left sweeps across the curved model path while the ego vehicle makes a tight left turn"
+    },
+    {
+      "id": "carnival-14c-5-tight-curve-adjacent-right-9",
+      "vehicle_folder": "KIA_CARNIVAL_4TH_GEN c4dcf95545dafe68",
+      "log": "0000014c--96eee11a8d--5/rlog.zst",
+      "source": "front+corner",
+      "window": [9.35, 10.50],
+      "expected": "clear",
+      "human_verified": true,
+      "forbidden_lead_one_ids": [1448, 1510],
+      "forbidden_lead_two_ids": [1448, 1510],
+      "scene": "A moving vehicle remains far to the right while a tight left curve projects its corner-radar track onto the model path"
     }
   ]
 }

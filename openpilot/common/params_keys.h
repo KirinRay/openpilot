@@ -212,6 +212,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"HDPuse", {PERSISTENT, INT, "0"}},
 
     {"AutoCruiseControl", {PERSISTENT, INT, "0"}},
+    {"SoftHoldOnCancel", {PERSISTENT, BOOL, "0"}},
     {"CruiseEcoControl", {PERSISTENT, INT, "2"}},
     {"CarrotCruiseDecel", {PERSISTENT, INT, "-1"}},
     {"CarrotCruiseAtcDecel", {PERSISTENT, INT, "-1"}},
@@ -234,6 +235,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoNaviSpeedCtrlEnd", {PERSISTENT, INT, "7"}},
     {"AutoNaviSpeedCtrlMode", {PERSISTENT, INT, "2"}},
     {"VehicleNaviCanControl", {PERSISTENT, BOOL, "0"}},
+    {"VehicleNaviCurveControl", {PERSISTENT, BOOL, "0"}},
+    {"VehicleNaviCurveMppControl", {PERSISTENT, BOOL, "0"}},
+    {"VehicleNaviCurveSpeedFactor", {PERSISTENT, INT, "100"}},
+    {"VehicleNaviCurveCtrlEnd", {PERSISTENT, INT, "3"}},
     {"VehicleNaviSchoolZoneControl", {PERSISTENT, BOOL, "0"}},
     {"VehicleSpeedCameraControlMode", {PERSISTENT, INT, "1"}},
     {"VehicleSpeedCameraDistanceTime", {PERSISTENT, INT, "60"}},
@@ -340,8 +345,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneLineCheck", {PERSISTENT, INT, "0"}},
     {"MaxAngleFrames", {PERSISTENT, INT, "89"}},
 
-    {"SoftHoldMode", {PERSISTENT, INT, "0"}},
-
     {"LatMpcPathCost", {PERSISTENT, INT, "200"}},
     {"LatMpcMotionCost", {PERSISTENT, INT, "7"}},
     {"LatMpcAccelCost", {PERSISTENT, INT, "120"}},
@@ -376,6 +379,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotException", {CLEAR_ON_MANAGER_START, STRING}},
     {"CarrotExceptionSent", {CLEAR_ON_MANAGER_START, BOOL}},
     {"CarrotExceptionDiscordWebhookUrl", {PERSISTENT, STRING}},
+    {"CwebPushRecoveryBoot", {PERSISTENT, BOOL, "0"}},
 
     {"CarName", {PERSISTENT, STRING}},
     {"EVTable", {PERSISTENT, BOOL, "0"}},
