@@ -54,6 +54,7 @@ from openpilot.selfdrive.carrot.radar_motion import (
   prefer_front_radar_kinematics,
   radar_motion_sensitivity,
   stationary_shadow_corner_supported,
+  turning_corner_path_entry_allowed,
   model_path_point_at_s,
   project_to_model_path,
   visible_motion_points,
@@ -1156,6 +1157,7 @@ class RadarMotionShadowSelector:
           time_s=frame.time_s,
           stationary_points=stationary_points,
           enable_radar_tracks=self.enable_radar_tracks,
+          yaw_rate_rad_s=frame.yaw_rate_rad_s,
         )
         if match is not None:
           lead_one_results.append(lead_from_vision_match(match))
@@ -1329,6 +1331,22 @@ class RadarMotionShadowSelector:
         )
         for identity, prediction in predictions.items()
       }
+      allowed_predictions = {
+        identity: prediction
+        for identity, prediction in predictions.items()
+        if (
+          (point := point_by_identity.get(identity)) is not None
+          and turning_corner_path_entry_allowed(
+            prediction.source,
+            point.y_rel,
+            prediction.d_path,
+            frame.yaw_rate_rad_s,
+            cross_sensor_confirmed=(
+              identity in front_kinematic_matches
+            ),
+          )
+        )
+      }
       predecel = predecel_tracker.update(
         frame.time_s,
         (
@@ -1338,9 +1356,14 @@ class RadarMotionShadowSelector:
               prediction,
               point.d_rel,
               point.v_rel,
+              v_ego=frame.v_ego,
+              cross_sensor_confirmed=(
+                (prediction.source, prediction.track_id)
+                in front_kinematic_matches
+              ),
             ),
           )
-          for prediction in predictions.values()
+          for prediction in allowed_predictions.values()
           if (
             self.motion_sensitivity.cut_in_enabled
             and (
@@ -1380,7 +1403,7 @@ class RadarMotionShadowSelector:
       decision = decision_tracker.update(
         frame.time_s,
         (
-          predictions.values()
+          allowed_predictions.values()
           if self.motion_sensitivity.cut_in_enabled
           else ()
         ),
