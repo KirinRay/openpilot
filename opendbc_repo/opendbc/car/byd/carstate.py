@@ -18,6 +18,9 @@ from opendbc.car.interfaces import CarStateBase
 from opendbc.car.byd.values import DBC, CanBus, LKASConfig, CarControllerParams
 from opendbc.car.byd.tuning import Tuning
 
+import os
+BYD_RADAR = os.getenv("BYD_RADAR") is not None
+
 ButtonType = structs.CarState.ButtonEvent.Type
 
 class CarState(CarStateBase):
@@ -37,6 +40,9 @@ class CarState(CarStateBase):
         self.acc_cmd_counter = 0
 
         self.eps_warning = False
+        # EPS angle/rate abnormal counters (consumed by Tuning.EPS_ANGLE_*_WARNING_CNT)
+        self.eps_angle_exceed_cnt = 0
+        self.eps_angle_speed_cnt = 0
 
         self.acc_active_last = False
         self.low_speed_alert = False
@@ -54,7 +60,6 @@ class CarState(CarStateBase):
 
         self.cam_lkas = 0
         self.cam_acc = 0
-        self.cam_hud = 0
         self.esc_eps = 0
 
         self.setTimeDelay = 100
@@ -86,15 +91,8 @@ class CarState(CarStateBase):
         lkas_config_isAccOn = (self.mpc_lkas_config != LKASConfig.DISABLE)
         lkas_isMainSwOn = bool(cp.vl["PCM_BUTTONS"]["BTN_TOGGLE_ACC_OnOff"])
         self.lkas_isMainSwOn = bool(cp.vl["PCM_BUTTONS"]["BTN_TOGGLE_ACC_OnOff"])
-        # 原车摄像头被 CP(C3X) 替代后, 其 ACC_HUD_ADAS 持续广播 ERROR(AccState=7, AccOn1=0),
-        # 不可作为 ACC 可用性/激活判断依据 (否则 available=False → wrongCarMode → 无法 engage)。
-        # 参考现代 (Hyundai) 方法论: available 看主开关(MainMode_ACC) + 配置, 不读被替代的摄像头 ERROR。
-        # AccOn1 跟随主开关 (用户按 ACC 主开关即可 engage)
-        lkas_hud_AccOn1 = lkas_isMainSwOn
-        self.acc_state = cp_cam.vl["ACC_HUD_ADAS"]["AccState"]
-        # 原车 ERROR(7) 且主开关已开 → 说明原车视觉被替代, 其 ERROR 不可信, 视为未激活(0), 不误报转向故障
-        if self.acc_state == 7 and lkas_isMainSwOn:
-          self.acc_state = 0
+        lkas_hud_AccOn1 = bool(cp_cam.vl["ACC_HUD_ADAS"]["AccOn1"])
+        self.acc_state  = cp_cam.vl["ACC_HUD_ADAS"]["AccState"]
         self.adas_set_dist = cp_cam.vl["ACC_HUD_ADAS"]["SetDistance"]
 
         prev_btn_acc_cancel = self.btn_acc_cancel
@@ -162,7 +160,17 @@ class CarState(CarStateBase):
         # fault is wrong - both are usually set during normal ACC+steering cooperation, which would
         # wrongly trigger steerFaultTemporary while actively controlling. Prefer the raw SteerWarning
         # bit; keeping AccState==7 (ERROR) as the primary fault signal below.
-        self.eps_warning = bool(cp.vl["ACC_EPS_STATE"]["SteerWarning"]) if not Tuning.DISABLE_EPS_WARNING else False
+        # EPS angle/rate abnormal detection (need consecutive exceed to avoid false positive)
+        if abs(ret.steeringAngleDeg) > 400.0 or abs(self.steeringRateDegAbs) > 100.0:
+            self.eps_angle_exceed_cnt += 1
+            self.eps_angle_speed_cnt += 1
+        else:
+            self.eps_angle_exceed_cnt = 0
+            self.eps_angle_speed_cnt = 0
+
+        extra_warning = (self.eps_angle_exceed_cnt >= Tuning.EPS_ANGLE_EXCEED_WARNING_CNT or
+                         self.eps_angle_speed_cnt >= Tuning.EPS_ANGLE_SPEED_WARNING_CNT)
+        self.eps_warning = (bool(cp.vl["ACC_EPS_STATE"]["SteerWarning"]) or extra_warning) if not Tuning.DISABLE_EPS_WARNING else False
         self.eps_state_counter = int(cp.vl["ACC_EPS_STATE"]["Counter"])
 
         ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > Tuning.STEER_PRESSED_THRESHOLD, 3)
@@ -201,10 +209,23 @@ class CarState(CarStateBase):
 
         self.cam_lkas = copy.copy(cp_cam.vl["ACC_MPC_STATE"])
         self.cam_acc = copy.copy(cp_cam.vl["ACC_CMD"])
-        self.cam_hud = copy.copy(cp_cam.vl["ACC_HUD_ADAS"])  # 原车 ACC_HUD_ADAS 消息，供 create_hud_adas 继承
         self.esc_eps = copy.copy(cp.vl["ACC_EPS_STATE"])
-        # 唐DM(ARS4xx)主目标距离由 radar_interface(bus1 0x109 → radarState.leadOne) 提供。
-        # carstate 不读 RADAR_MRR(0x374): 实测唐DM bus 无此帧(ARS4xx 无 MRR), 读它会报 0x374 not valid。
+
+        if BYD_RADAR:
+            mrr_id = int(cp_cam.vl["RADAR_MRR"]["TargetID"])
+
+            if mrr_id == 2: #1:left, 2:front, 3:right
+                if bool(cp_cam.vl["RADAR_MRR"]["IsValid"]):
+                    raw_dist = int(cp_cam.vl["RADAR_MRR"]["LongDist"])
+                    # 增加距离滤波，避免异常值导致误判
+                    if 3 < raw_dist < 200:
+                        self.mrr_leading_dist = raw_dist
+                    else:
+                        self.mrr_leading_dist = 199  # 无效/越界距离回兜底
+                else:
+                    self.mrr_leading_dist = 199
+            else:
+                self.mrr_leading_dist = 199  # 非前向目标(左/右)无前车距离, 回兜底避免 stale
 
         ret.steerFaultPermanent = bool(cp.vl["ACC_EPS_STATE"]["TorqueFailed"]) if not Tuning.DISABLE_EPS_PERMANENT_FAULT else False
 
@@ -263,7 +284,8 @@ class CarState(CarStateBase):
             ("ACC_CMD", 50),
             ("ACC_MPC_STATE", 50),
         ]
-        # 唐DM 雷达(ARS4xx)由 radar_interface 读 bus1 0x109/0x380, carstate 不读 RADAR_MRR(0x374, 唐DM无此帧)
+        if BYD_RADAR:
+            cam_messages.append(("RADAR_MRR", 60))
 
         return {
             Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, CanBus.ESC),
