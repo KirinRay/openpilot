@@ -40,7 +40,7 @@ class Tuning:
   EPS_ANGLE_SPEED_WARNING_CNT = 3
 
   # 禁用EPS故障检查, 某些车有EPS固件比较奇怪报错的话，则可以设为True
-  DISABLE_EPS_WARNING = False
+  DISABLE_EPS_WARNING = True
   DISABLE_EPS_TEMPORARY_FAULT = False
   DISABLE_EPS_PERMANENT_FAULT = False
 
