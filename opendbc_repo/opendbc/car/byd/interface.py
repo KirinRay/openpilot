@@ -10,6 +10,7 @@ from opendbc.car.byd.carcontroller import CarController
 from opendbc.car.byd.carstate import CarState
 from opendbc.car.byd.radar_interface import RadarInterface
 
+import os
 try:
   from openpilot.common.params import Params
 except Exception:
@@ -26,6 +27,8 @@ NON_LINEAR_TORQUE_PARAMS = {
   CAR.BYD_TANG_DM: [1.807, 1.674, 0.04],
   CAR.BYD_SONG_PLUS_DMI_21: [1.807, 1.674, 0.04]
 }
+
+BYD_RADAR = os.getenv("BYD_RADAR") is not None
 
 class CarInterface(CarInterfaceBase):
     CarState = CarState
@@ -54,7 +57,14 @@ class CarInterface(CarInterfaceBase):
         return float(steer_torque / torque_params.latAccelFactor) + friction  # 实车版: 除以latAccelFactor(对齐加密备份)
 
     def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
-        # 按车型 fingerprint 判断: 唐DM等非线性扭矩车型用 siglin, 其余用 linear
+        # 实车版: 用 Params BydLatUseSiglin 参数运行时可切换 siglin/linear
+        # 兼容: BydLatUseSiglin 未定义 或 Params 不可用(独立测试)时回退 fingerprint 判断, 保证系统运行正确
+        if Params is not None:
+            try:
+                use_siglin = Params().get_bool("BydLatUseSiglin")
+                return self.torque_from_lateral_accel_siglin if use_siglin else self.torque_from_lateral_accel_linear
+            except Exception:
+                pass  # 参数未定义, 回退 fingerprint 判断
         if self.CP.carFingerprint in NON_LINEAR_TORQUE_PARAMS:
             return self.torque_from_lateral_accel_siglin
         else:
@@ -67,9 +77,12 @@ class CarInterface(CarInterfaceBase):
         ret.safetyConfigs = [get_safety_config(_safety)]
 
         ret.dashcamOnly = False
-        # 唐DM 使用雷达 (radar_interface bus1 0x109); 雷达采样周期 0.05s (20Hz)
-        ret.radarUnavailable = False
-        ret.radarTimeStep = 0.05
+        #disable simple pt radar due to mpc solver issue in official OP. It works with carrot/sunny/forg.
+        if BYD_RADAR:
+            ret.radarUnavailable = False
+        else:
+            ret.radarUnavailable = True #candidate not in PT_RADAR_CAR
+
 
         ret.minEnableSpeed = -1.
         ret.enableBsm = 0x418 in fingerprint[CanBus.ESC]
@@ -110,8 +123,7 @@ class CarInterface(CarInterfaceBase):
         use_experimental_long = candidate in EXP_LONG_CAR
 
         ret.alphaLongitudinalAvailable = use_experimental_long
-        # Ported from cp11 (verified 控车): 唐DM 等直接按 EXP_LONG_CAR 开启纵向, 不依赖 experimental_long 参数门控
-        ret.openpilotLongitudinalControl = use_experimental_long
+        ret.openpilotLongitudinalControl = experimental_long and ret.alphaLongitudinalAvailable
 
         ret.longitudinalTuning.kpBP, ret.longitudinalTuning.kiBP = [[0.], [0.]]
         ret.longitudinalTuning.kpV,  ret.longitudinalTuning.kiV  = [[1.0], [0.]]  # kpV=1.0 实车版验证值(对齐加密备份)
@@ -124,8 +136,8 @@ class CarInterface(CarInterfaceBase):
             ret.autoResumeSng = True
             ret.startingState = True
             ret.startAccel = 0.8
-            ret.stopAccel = -0.3  # Ported from cp11 (verified 控车): 唐DM 停车减速度
-            ret.vEgoStarting = 0.1 * CV.KPH_TO_MS  # Ported from cp11: 起步速度阈值
+            ret.stopAccel = -0.5
+            ret.vEgoStarting = 0.2 * CV.KPH_TO_MS
             ret.vEgoStopping = 0.1 * CV.KPH_TO_MS
             ret.longitudinalActuatorDelay = 0.5
         else:
