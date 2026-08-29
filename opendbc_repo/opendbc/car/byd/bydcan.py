@@ -1,14 +1,9 @@
 import numpy as np
-import os
 from opendbc.car import structs
 from opendbc.car.byd.values import  CanBus, CarControllerParams
 
 GearShifter = structs.CarState.GearShifter
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
-
-# 雷达开关（与 bydcan.py 一致）：BYD_RADAR 环境变量值非 "0"/空 才算开启
-# (continue.sh export BYD_RADAR=0 表示关闭, 不能按 is not None 判断否则 =0 会被当成开启)
-BYD_RADAR = os.getenv("BYD_RADAR") not in (None, "", "0", "false", "False")
 
 def byd_checksum(byte_key, dat):
     first_bytes_sum = sum(byte >> 4 for byte in dat)
@@ -253,16 +248,13 @@ def create_hud_adas(packer, CP, cam_hud: dict, CS, CC, longActive, counter):
     values["SetDistance"] = 3
     # Status: ACC 状态显示, 对齐黄金 ENGAGED=4
     values["Status"] = 4 if acc_active else 3
-    # 有前车：雷达关闭(BYD_RADAR=0)时不依赖雷达，保持原车/默认值（不误报前车）
-    # 雷达开启时用 mrr_leading_dist (<200 = 有前车)
-    if BYD_RADAR:
-        mrr_dist = getattr(CS, 'mrr_leading_dist', 199) if CS is not None else 199
-        has_lead = 1 if (mrr_dist < 200) else 0
-        values["HasLead"] = has_lead
-        if has_lead:
-            # LeadingDistance 粗略分挡
-            values["LeadingDistance"] = 0 if mrr_dist > 80 else (1 if mrr_dist > 40 else 2)
-    # 雷达关闭时不改 HasLead（保持 cam_hud 原车值/默认 0），避免误报
+    # 有前车：唐DM 用雷达 mrr_leading_dist (<200 = 有前车)
+    mrr_dist = getattr(CS, 'mrr_leading_dist', 199) if CS is not None else 199
+    has_lead = 1 if (mrr_dist < 200) else 0
+    values["HasLead"] = has_lead
+    if has_lead:
+        # LeadingDistance 粗略分挡
+        values["LeadingDistance"] = 0 if mrr_dist > 80 else (1 if mrr_dist > 40 else 2)
     # HUD 通知: 对齐黄金 — ENGAGED 时 0(NONE), READY(主开关on未engage) 时 8, OFF 时 0
     if acc_active:
         values["Notify"] = 0    # ENGAGE 时黄金=0

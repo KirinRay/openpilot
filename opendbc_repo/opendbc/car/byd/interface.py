@@ -10,7 +10,6 @@ from opendbc.car.byd.carcontroller import CarController
 from opendbc.car.byd.carstate import CarState
 from opendbc.car.byd.radar_interface import RadarInterface
 
-import os
 try:
   from openpilot.common.params import Params
 except Exception:
@@ -27,8 +26,6 @@ NON_LINEAR_TORQUE_PARAMS = {
   CAR.BYD_TANG_DM: [1.807, 1.674, 0.04],
   CAR.BYD_SONG_PLUS_DMI_21: [1.807, 1.674, 0.04]
 }
-
-BYD_RADAR = os.getenv("BYD_RADAR") is not None
 
 class CarInterface(CarInterfaceBase):
     CarState = CarState
@@ -57,14 +54,7 @@ class CarInterface(CarInterfaceBase):
         return float(steer_torque / torque_params.latAccelFactor) + friction  # 实车版: 除以latAccelFactor(对齐加密备份)
 
     def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
-        # 实车版: 用 Params BydLatUseSiglin 参数运行时可切换 siglin/linear
-        # 兼容: BydLatUseSiglin 未定义 或 Params 不可用(独立测试)时回退 fingerprint 判断, 保证系统运行正确
-        if Params is not None:
-            try:
-                use_siglin = Params().get_bool("BydLatUseSiglin")
-                return self.torque_from_lateral_accel_siglin if use_siglin else self.torque_from_lateral_accel_linear
-            except Exception:
-                pass  # 参数未定义, 回退 fingerprint 判断
+        # 按车型 fingerprint 判断: 唐DM等非线性扭矩车型用 siglin, 其余用 linear
         if self.CP.carFingerprint in NON_LINEAR_TORQUE_PARAMS:
             return self.torque_from_lateral_accel_siglin
         else:
@@ -77,14 +67,9 @@ class CarInterface(CarInterfaceBase):
         ret.safetyConfigs = [get_safety_config(_safety)]
 
         ret.dashcamOnly = False
-        #disable simple pt radar due to mpc solver issue in official OP. It works with carrot/sunny/forg.
-        if BYD_RADAR:
-            ret.radarUnavailable = False
-            # Ported from cp11 (verified 控车): 唐DM = HAN_DM20_RADAR_CAR, 雷达采样周期 0.05s (20Hz CAN1/MRR)
-            ret.radarTimeStep = 0.05
-        else:
-            ret.radarUnavailable = True #candidate not in PT_RADAR_CAR
-
+        # 唐DM 使用雷达 (radar_interface bus1 0x109); 雷达采样周期 0.05s (20Hz)
+        ret.radarUnavailable = False
+        ret.radarTimeStep = 0.05
 
         ret.minEnableSpeed = -1.
         ret.enableBsm = 0x418 in fingerprint[CanBus.ESC]

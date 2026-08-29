@@ -18,9 +18,6 @@ from opendbc.car.interfaces import CarStateBase
 from opendbc.car.byd.values import DBC, CanBus, LKASConfig, CarControllerParams
 from opendbc.car.byd.tuning import Tuning
 
-import os
-BYD_RADAR = os.getenv("BYD_RADAR") not in (None, "", "0", "false", "False")  # BYD_RADAR=0 表示关闭
-
 ButtonType = structs.CarState.ButtonEvent.Type
 
 class CarState(CarStateBase):
@@ -206,12 +203,8 @@ class CarState(CarStateBase):
         self.cam_acc = copy.copy(cp_cam.vl["ACC_CMD"])
         self.cam_hud = copy.copy(cp_cam.vl["ACC_HUD_ADAS"])  # 原车 ACC_HUD_ADAS 消息，供 create_hud_adas 继承
         self.esc_eps = copy.copy(cp.vl["ACC_EPS_STATE"])
-
-        if BYD_RADAR:
-            # 唐DM(ARS4xx)主目标距离由 radar_interface(bus1 0x109 → radarState.leadOne) 提供。
-            # carstate 不读 RADAR_MRR(0x374): 实测唐DM bus 无此帧(ARS4xx 无 MRR), 读它会报 0x374 not valid。
-            # mrr_leading_dist 保持默認兜底, 由 acc_cmd 的 mrr_leaddist 用于 jerk 插值 + HasLead 判断。
-            pass
+        # 唐DM(ARS4xx)主目标距离由 radar_interface(bus1 0x109 → radarState.leadOne) 提供。
+        # carstate 不读 RADAR_MRR(0x374): 实测唐DM bus 无此帧(ARS4xx 无 MRR), 读它会报 0x374 not valid。
 
         ret.steerFaultPermanent = bool(cp.vl["ACC_EPS_STATE"]["TorqueFailed"]) if not Tuning.DISABLE_EPS_PERMANENT_FAULT else False
 
