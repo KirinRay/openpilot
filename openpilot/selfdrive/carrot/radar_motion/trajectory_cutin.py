@@ -59,6 +59,8 @@ PAIRED_OUTER_BODY_MIN_REPORTED_INWARD_MPS = 0.15
 PAIRED_OUTER_BODY_MAX_VREL_MPS = 1.0
 PAIRED_OUTER_BODY_MAX_ABS_YAW_RATE_RAD_S = 0.040
 PAIRED_OUTER_BODY_MIN_INWARD_PROGRESS_M = 0.15
+PAIRED_OUTER_BODY_MAX_DREL_DELTA_M = 1.25
+PAIRED_OUTER_BODY_RANGE_CHECK_MIN_ABS_YAW_RATE_RAD_S = 0.020
 PAIRED_FAST_PASS_MIN_CLOSING_SPEED_MPS = 5.0
 PAIRED_FAST_PASS_MAX_TTC_S = 0.80
 PAIRED_FAST_PASS_MIN_HISTORY_S = 0.35
@@ -174,6 +176,7 @@ class TrajectoryCutInEstimate:
   close_front_supported: bool
   curve_alias: bool
   reason: str
+  passing_before_overlap: bool = False
 
   @property
   def identity(self) -> tuple[str, int, int]:
@@ -202,6 +205,7 @@ class _TrackState:
   cutin_until_s: float = -math.inf
   risk_since_s: float | None = None
   risk_until_s: float = -math.inf
+  outer_body_ambiguous_until_s: float = -math.inf
 
   def reset(self, continuity_id: int) -> None:
     self.continuity_id = continuity_id
@@ -211,6 +215,7 @@ class _TrackState:
     self.cutin_until_s = -math.inf
     self.risk_since_s = None
     self.risk_until_s = -math.inf
+    self.outer_body_ambiguous_until_s = -math.inf
 
 
 def _values_since(
@@ -472,22 +477,34 @@ class TrajectoryCutInDetector:
         and point.d_rel <= CROSS_SENSOR_SLOT_HANDOFF_MAX_DREL_M
         else None
       )
+      prior_alias = self._corner_front_aliases.get(raw_key)
       if stable_cross_key is not None:
         self._corner_front_aliases[raw_key] = stable_cross_key, time_s
-      else:
-        prior_alias = self._corner_front_aliases.get(raw_key)
-        if (
-          prior_alias is not None
-          and point.source.startswith("corner")
-          and point.d_rel <= CROSS_SENSOR_SLOT_HANDOFF_MAX_DREL_M
-          and time_s - prior_alias[1] <= CROSS_SENSOR_ALIAS_HOLD_S
-        ):
-          stable_cross_key = prior_alias[0]
+      elif (
+        prior_alias is not None
+        and point.source.startswith("corner")
+        and point.d_rel <= CROSS_SENSOR_SLOT_HANDOFF_MAX_DREL_M
+        and time_s - prior_alias[1] <= CROSS_SENSOR_ALIAS_HOLD_S
+      ):
+        stable_cross_key = prior_alias[0]
       key = stable_cross_key or raw_key
       if key in seen:
         key = raw_key
       seen.add(key)
       state = self._tracks.get(key)
+      if state is None and key != raw_key:
+        # The corner point can acquire its first front-radar association only
+        # after it has already built useful OUT-to-IN history. Transfer that
+        # physically continuous raw/prior-alias state to the stable identity;
+        # otherwise the association itself erases the boundary crossing.
+        history_key = prior_alias[0] if prior_alias is not None else raw_key
+        history_state = self._tracks.get(history_key)
+        if (
+          history_state is not None
+          and self._continuous(history_state, point, time_s)
+        ):
+          state = self._tracks.pop(history_key)
+          self._tracks[key] = state
       if state is None:
         state = _TrackState(self._new_continuity_id())
         self._tracks[key] = state
@@ -632,6 +649,38 @@ class TrajectoryCutInDetector:
         for value in state.observations
       )
       current_overlap = abs(projection.d_path) <= PATH_OVERLAP_HALF_WIDTH_M
+      # Both sensors seeing a nearby body proves existence, not lane entry.
+      # With ego rotation, different body facets can appear to move inward as
+      # ego passes the vehicle. A straight-road body offset alone is not this
+      # ambiguity: retain early support for genuinely entering large vehicles.
+      # Keep that ambiguous outer-body pair out of prediction-based approval
+      # until a sensor reaches the overlap corridor or vision corroborates it.
+      ambiguous_outer_body_pair = (
+        point.source.startswith("corner")
+        and cross_sensor_point is not None
+        and cross_sensor_point.source == "frontRadar"
+        and point.d_rel <= CROSS_SENSOR_SLOT_HANDOFF_MAX_DREL_M
+        and point.v_rel < -0.1
+        and recent_abs_yaw_max
+        >= PAIRED_OUTER_BODY_RANGE_CHECK_MIN_ABS_YAW_RATE_RAD_S
+        and not vision_supported
+        and not current_overlap
+        and abs(cross_sensor_point.y_rel) > 2.15
+        and abs(point.d_rel - cross_sensor_point.d_rel)
+        > PAIRED_OUTER_BODY_MAX_DREL_DELTA_M
+      )
+      if ambiguous_outer_body_pair:
+        state.outer_body_ambiguous_until_s = time_s + CROSS_SENSOR_ALIAS_HOLD_S
+      elif vision_supported or current_overlap or (
+        cross_sensor_point is not None
+        and abs(cross_sensor_point.y_rel) <= 2.15
+      ):
+        state.outer_body_ambiguous_until_s = -math.inf
+      # Losing the paired front for one radar cycle does not resolve the
+      # ambiguity or authorize the corner-only close-entry exception.
+      ambiguous_outer_body_pair = (
+        time_s <= state.outer_body_ambiguous_until_s
+      )
       close_born_rear_pass = (
         point.source.startswith("corner")
         and cross_sensor_supported
@@ -653,8 +702,21 @@ class TrajectoryCutInDetector:
         and reported_inward < PAIRED_PARALLEL_MAX_REPORTED_INWARD_MPS
       )
       non_cutin_side_motion = close_born_rear_pass or paired_parallel_drift
+      uncorroborated_close_front = (
+        point.source == "frontRadar"
+        and point.d_rel <= 8.0
+        and not vision_supported
+        and not cross_sensor_supported
+      )
+      # Close legacy front-radar body returns can drift just inside the wider
+      # 2.15 m near-field allowance while the vehicle remains in its adjacent
+      # lane. Without independent vision/corner support, require the measured
+      # center to reach the actual body-overlap corridor before leadTwo.
       front_overlap_half_width = (
-        2.15 if point.d_rel <= 20.0 else PATH_OVERLAP_HALF_WIDTH_M
+        PATH_OVERLAP_HALF_WIDTH_M
+        if uncorroborated_close_front
+        else 2.15 if point.d_rel <= 20.0
+        else PATH_OVERLAP_HALF_WIDTH_M
       )
       raw_body_overlap = abs(point.y_rel) <= front_overlap_half_width
       ahead_at_overlap = (
@@ -855,6 +917,7 @@ class TrajectoryCutInDetector:
       )
       common_ok = (
         existence_supported
+        and not ambiguous_outer_body_pair
         and started_outside
         and front_range_ok
         and close_front_supported
@@ -955,10 +1018,83 @@ class TrajectoryCutInDetector:
           )
         )
       )
-      raw_cutin = common_ok and not non_cutin_side_motion and (
+      # A close side body can satisfy the geometric overlap forecast even
+      # though its closing motion will carry it behind ego before that
+      # forecasted overlap.  Cross-sensor existence does not make that an
+      # actionable entry; wait until the body is already overlapping or is
+      # still ahead at the predicted overlap time.
+      paired_ahead_at_overlap = (
+        time_to_overlap_s is not None
+        and point.d_rel
+        + min(point.v_rel, relative_path_speed, recent_v_rel_min)
+        * time_to_overlap_s
+        > 0.5
+      )
+      # Front and corner radar can observe different ends of a long vehicle.
+      # Accept the front return's own entry forecast only with measured inward
+      # motion; an inner body reflection inside the 2.15 m allowance is not
+      # sufficient evidence that an otherwise parallel vehicle is entering.
+      paired_front_entry_ahead = False
+      if point.source.startswith("corner") and cross_sensor_point is not None:
+        front_projection = project_to_model_path(
+          path, cross_sensor_point.d_rel, cross_sensor_point.y_rel,
+        )
+        front_inward = _reported_inward_speed(
+          cross_sensor_point, front_projection, yaw_rate_rad_s,
+        )
+        front_clearance = max(0.0, abs(front_projection.d_path) - PATH_OVERLAP_HALF_WIDTH_M)
+        if front_clearance == 0.0:
+          paired_front_entry_ahead = cross_sensor_point.d_rel > 0.5
+        elif front_inward >= MIN_INWARD_RATE_MPS:
+          front_entry_s = front_clearance / front_inward
+          paired_front_entry_ahead = (
+            front_entry_s <= horizon_s
+            and cross_sensor_point.d_rel + cross_sensor_point.v_rel * front_entry_s > 0.5
+          )
+      paired_entry_ahead = (
+        current_overlap
+        or (ahead_at_overlap and paired_ahead_at_overlap)
+        or paired_front_entry_ahead
+      )
+      paired_close_entry = paired_close_entry and paired_entry_ahead
+      passing_before_overlap = (
+        point.source.startswith("corner")
+        and cross_sensor_supported
+        and point.d_rel <= 8.0
+        and time_to_overlap_s is not None
+        and not paired_entry_ahead
+      )
+      strong_consistent_entry = (
+        inward_progress >= 0.60
+        and abs(inward_rate - reported_inward) <= 0.30
+      )
+      committed_inward_entry = (
+        inward_progress >= 0.60
+        and direction_consistency >= 0.90
+      )
+      # A non-closing, unobserved-by-vision adjacent vehicle should not enter
+      # leadTwo merely because vRel crosses +0.5 m/s while a small amount of
+      # path-relative drift extrapolates toward the corridor.  Such a vehicle
+      # remains eligible after it reaches the near boundary or demonstrates a
+      # larger, physically coherent lane-entry trajectory.
+      weak_nonclosing_projected_entry = (
+        point.source.startswith("corner")
+        and point.d_rel > 15.0
+        and -0.1 <= point.v_rel <= 2.0
+        and not vision_supported
+        and not current_overlap
+        and abs(projection.d_path) > 2.30
+        and not committed_inward_entry
+      )
+      raw_cutin = (
+        common_ok
+        and not non_cutin_side_motion
+        and not weak_nonclosing_projected_entry
+        and (
         front_entry
         if point.source == "frontRadar"
         else corner_entry or paired_close_entry or close_direct_entry
+        )
       )
       cutin_confirmation_s = (
         0.0
@@ -993,6 +1129,8 @@ class TrajectoryCutInDetector:
         or non_cutin_side_motion
         or curve_alias
         or not front_curve_motion_supported
+        or ambiguous_outer_body_pair
+        or passing_before_overlap
       ):
         # A hold bridges brief radar jitter, but must not resurrect a candidate
         # whose recent physical motion has clearly stopped or reversed.
@@ -1009,10 +1147,6 @@ class TrajectoryCutInDetector:
         confirmed_cutin = False
       closing_time_s = (
         point.d_rel / -point.v_rel if point.v_rel < -0.1 else math.inf
-      )
-      strong_consistent_entry = (
-        inward_progress >= 0.60
-        and abs(inward_rate - reported_inward) <= 0.30
       )
       lead_role_relevant = (
         point.v_rel >= 0.5
@@ -1079,6 +1213,7 @@ class TrajectoryCutInDetector:
         or time_to_overlap_s is None
         or curve_alias
         or not front_curve_motion_supported
+        or ambiguous_outer_body_pair
       ):
         # The planner independently rejects a non-closing risk. Clear it here
         # as well so the validator and published radarState describe the same
@@ -1106,8 +1241,10 @@ class TrajectoryCutInDetector:
       reason = (
         "confirmed trajectory CUT-IN" if confirmed_cutin
         else "trajectory pre-deceleration" if predecel_risk
+        else "side pass before path entry" if passing_before_overlap
         else "close-born rear pass" if close_born_rear_pass
         else "parallel side drift" if paired_parallel_drift
+        else "ambiguous outer-body pair" if ambiguous_outer_body_pair
         else "uncorroborated close front" if not close_front_supported
         else "front lateral uncertainty" if not front_motion_supported
         else "corner lateral jitter" if jittering
@@ -1155,6 +1292,7 @@ class TrajectoryCutInDetector:
         close_front_supported=close_front_supported,
         curve_alias=curve_alias,
         reason=reason,
+        passing_before_overlap=passing_before_overlap,
       ))
 
     for key, state in tuple(self._tracks.items()):

@@ -21,7 +21,6 @@ from openpilot.selfdrive.controls.lib.longitudinal_preview import (
   apply_preview_target,
   clip_preview_offset,
   get_lead_preview_request,
-  rate_limit_accel_boost,
   rate_limit_preview,
 )
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
@@ -39,7 +38,6 @@ MIN_ALLOW_THROTTLE_SPEED = 2.5
 RESET_DECEL_RAMP_TIME = 2.0
 TURN_CURVATURE_LOOKAHEAD = 1.0
 TURN_CURVATURE_MIN_SPEED = 3.0
-LEAD_ACCEL_MIN_TRACK_FRAMES = 3
 
 
 def get_max_accel(v_ego):
@@ -114,9 +112,8 @@ class LongitudinalPlanner:
     self.lead_preview = 0.0
     self.lead_preview_action_time = 0.0
     self.lead_preview_accel = 0.0
-    self.lead_accel_boost = 0.0
-    self.lead_preview_track_id = -1
-    self.lead_preview_track_frames = 0
+    self.lead_track_ids = [-1, -1]
+    self.lead_track_frames = [0, 0]
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -130,6 +127,19 @@ class LongitudinalPlanner:
     self.v_cruise_kph = 0.0
 
     self.params = Params()
+
+  def update_lead_tracks(self, radar_state):
+    for index, lead in enumerate((radar_state.leadOne, radar_state.leadTwo)):
+      track_id = int(lead.radarTrackId) if lead.status and lead.radar and lead.radarTrackId >= 0 else -1
+      if track_id >= 0 and track_id == self.lead_track_ids[index]:
+        self.lead_track_frames[index] += 1
+      elif track_id >= 0:
+        self.lead_track_ids[index] = track_id
+        self.lead_track_frames[index] = 1
+      else:
+        self.lead_track_ids[index] = -1
+        self.lead_track_frames[index] = 0
+    return tuple(self.lead_track_frames)
 
   @staticmethod
   def parse_model(model_msg):
@@ -244,15 +254,32 @@ class LongitudinalPlanner:
       cutin_predecel_limit,
     )
 
-    self.mpc.set_weights(
-      prev_accel_constraint,
-      personality=sm['selfdriveState'].personality,
-      jerk_factor=carrot.jerk_factor_apply,
-      a_change_cost_starting=carrot.aChangeCostStarting,
+    lead_track_frames = self.update_lead_tracks(sm['radarState'])
+    # Response strength is a driver preference at every following-distance level.
+    lead_accel_response_enabled = (
+      carrot.leadAccelResponse > 0
+      and not reset_state
+      and not sm['carState'].gasPressed
+      and not force_slow_decel
+      and accel_limits_turns[1] > 0.0
+      and not self.output_should_stop
     )
     self.mpc.set_accel_limits(accel_limits_turns[0], accel_limits_turns[1])
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
-    self.mpc.update(carrot, reset_state, sm['radarState'], v_cruise, x, v, a, j, personality=sm['selfdriveState'].personality)
+    self.mpc.update(
+      carrot, reset_state, sm['radarState'], v_cruise, x, v, a, j,
+      personality=sm['selfdriveState'].personality,
+      prev_accel_constraint=prev_accel_constraint,
+      jerk_factor=carrot.jerk_factor_apply,
+      a_change_cost_starting=carrot.aChangeCostStarting,
+      lead_accel_response_enabled=lead_accel_response_enabled,
+      cutout_relief_enabled=(
+        not reset_state and not sm['carState'].gasPressed
+        and not force_slow_decel and not self.output_should_stop
+      ),
+      lead_track_frames=lead_track_frames,
+      measured_a_ego=sm['carState'].aEgo,
+    )
 
     self.v_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
@@ -294,29 +321,6 @@ class LongitudinalPlanner:
     lead_index = 1 if self.mpc.source == 'lead1' else 0
     leads = (sm['radarState'].leadOne, sm['radarState'].leadTwo)
     lead = leads[lead_index]
-    lead_source_active = self.mpc.source in ('lead0', 'lead1')
-    lead_track_valid = lead.status and lead.radar and lead.radarTrackId >= 0
-    lead_track_id = int(lead.radarTrackId) if lead_track_valid else -1
-    if lead_track_id >= 0 and lead_track_id == self.lead_preview_track_id:
-      self.lead_preview_track_frames += 1
-    elif lead_track_id >= 0:
-      self.lead_preview_track_id = lead_track_id
-      self.lead_preview_track_frames = 1
-    else:
-      self.lead_preview_track_id = -1
-      self.lead_preview_track_frames = 0
-
-    tf1_accel_response = (
-      sm['selfdriveState'].personality == log.LongitudinalPersonality.aggressive
-      and carrot.leadAccelResponse > 0
-      and lead_source_active
-      and self.lead_preview_track_frames >= LEAD_ACCEL_MIN_TRACK_FRAMES
-      and not output_should_stop_mpc
-    )
-    gap_margin = (
-      float(lead.dRel - self.mpc.base_desired_distances[lead_index])
-      if lead_track_valid else -1.0
-    )
     preview_request = get_lead_preview_request(
       carrot.myDrivingMode,
       lead_status=(
@@ -329,31 +333,19 @@ class LongitudinalPlanner:
       ),
       a_lead=lead.aLeadK,
       a_ego=sm['carState'].aEgo,
-      accel_response_level=carrot.leadAccelResponse,
-      accel_response_enabled=tf1_accel_response,
-      v_rel=lead.vRel,
-      gap_margin=gap_margin,
     )
     if preview_request.active:
       requested_preview = rate_limit_preview(
         preview_request.offset_s,
         self.lead_preview,
-        decel_attack_step_s=preview_request.preview_attack_step,
       )
       self.lead_preview = clip_preview_offset(action_t, requested_preview)
       self.lead_preview_accel = preview_request.lead_accel_signal
       self.lead_preview_action_time = action_t + self.lead_preview
-      self.lead_accel_boost = rate_limit_accel_boost(
-        preview_request.accel_boost_target,
-        self.lead_accel_boost,
-        preview_request.boost_attack_step,
-        immediate_release=not preview_request.accel_response_active,
-      )
     else:
       self.lead_preview = 0.0
       self.lead_preview_accel = 0.0
       self.lead_preview_action_time = action_t
-      self.lead_accel_boost = 0.0
 
     output_a_target_preview, _, _, _ = get_accel_from_plan(
       self.v_desired_trajectory,
@@ -367,12 +359,6 @@ class LongitudinalPlanner:
       output_a_target_preview,
       carrot.myDrivingMode,
       self.lead_preview_accel,
-      a_ego=sm['carState'].aEgo,
-      accel_response_active=preview_request.accel_response_active,
-      accel_response_level=preview_request.accel_response_level,
-      accel_boost=self.lead_accel_boost,
-      accel_max=accel_limits_turns[1],
-      a_lead=lead.aLeadK,
     ) if preview_request.active else output_a_target_base
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop

@@ -10,6 +10,13 @@ from pathlib import Path
 
 import pytest
 
+from openpilot.selfdrive.carrot.server.services.settings import (
+  build_menu_categories,
+  current_vehicle_brand,
+  filter_settings_catalog_for_brand,
+  group_index,
+)
+
 SETTINGS_PATH = Path(__file__).resolve().parents[3] / "carrot_settings.json"
 PARAMS_KEYS_PATH = Path(__file__).resolve().parents[4] / "common" / "params_keys.h"
 
@@ -33,6 +40,20 @@ def params(settings):
 def test_the_catalogue_is_readable_and_populated(params):
   assert len(params) > 100
   assert all(isinstance(p.get("name"), str) and p["name"] for p in params)
+
+
+def test_onnx_vision_toggle_uses_existing_runtime_flag_and_lane_change_menu(settings, params):
+  by_name = {p["name"]: p for p in params}
+  vision = by_name["ShareData"]
+  assert (vision["control"], vision["min"], vision["max"], vision["default"]) == ("toggle", 0, 1, 0)
+  assert vision["risk"] == "high"
+  assert '{"ShareData", {PERSISTENT, INT, "0"}}' in PARAMS_KEYS_PATH.read_text(encoding="utf-8")
+  driving = next(category for category in settings["menu"] if category["id"] == "DRIVING")
+  steering = next(group for group in driving["groups"] if group["id"] == "STEER")
+  lane_change = next(group for group in steering["groups"] if group["id"] == "STEER_LANECHANGE")
+  assert "ShareData" in lane_change["params"]
+  for title in ("title", "etitle", "ctitle"):
+    assert "ONNX" in vision[title]
 
 
 def test_obsolete_lead_response_settings_are_removed(settings, params):
@@ -68,12 +89,14 @@ def test_longitudinal_comfort_settings_use_driver_facing_language(params):
   lead_accel_response = by_name["LeadAccelResponse"]
   assert (lead_accel_response["min"], lead_accel_response["max"], lead_accel_response["default"]) == (0, 5, 0)
   assert lead_accel_response["control"] == "select"
-  assert "차간거리 1단계" in lead_accel_response["descr"]
-  assert "TFollowGap1" in lead_accel_response["descr"]
-  assert "3단계는 일상 균형형" in lead_accel_response["descr"]
-  assert "최대 0.2m/s²" in lead_accel_response["descr"]
-  assert lead_accel_response["options"]["ko"][3] == "3 균형(추천)"
-  assert lead_accel_response["options"]["ko"][-1] == "5 가속추종(시험)"
+  assert "모든 차간거리 단계" in lead_accel_response["descr"]
+  assert "170/130/80/36/10" in lead_accel_response["descr"]
+  assert "95/80/60/35/15%" in lead_accel_response["descr"]
+  assert "MPC 뒤에 가속을 별도로 더하지 않으며" in lead_accel_response["descr"]
+  assert "CruiseMaxVals" in lead_accel_response["descr"]
+  assert "설정 TF에 도달" in lead_accel_response["descr"]
+  assert lead_accel_response["options"]["ko"][3] == "3 경쾌함(추천)"
+  assert lead_accel_response["options"]["ko"][-1] == "5 최대 추종(시험)"
 
   params_keys = PARAMS_KEYS_PATH.read_text(encoding="utf-8")
   assert '{"LeadAccelResponse", {PERSISTENT, INT, "0"}}' in params_keys
@@ -89,6 +112,81 @@ def test_longitudinal_comfort_settings_use_driver_facing_language(params):
   driving_mode = by_name["MyDrivingMode"]
   assert "ComfortBrake" not in driving_mode["descr"]
   assert "멀리서부터 천천히 감속" in driving_mode["descr"]
+
+
+def test_longitudinal_pid_defaults_match_registry(params):
+  by_name = {p["name"]: p for p in params}
+  assert tuple(by_name[name]["default"] for name in (
+    "LongTuningKpV", "LongTuningKiV", "LongTuningKf",
+  )) == (100, 0, 100)
+  for name in ("LongTuningKpV", "LongTuningKiV", "LongTuningKf"):
+    assert by_name[name]["hidden_brands"] == ["hyundai"]
+    assert "현대·기아·제네시스" in by_name[name]["descr"]
+    assert "hidden and ignored" in by_name[name]["edescr"]
+
+  params_keys = PARAMS_KEYS_PATH.read_text(encoding="utf-8")
+  for name, default in (
+    ("LongTuningKpV", 100),
+    ("LongTuningKiV", 0),
+    ("LongTuningKf", 100),
+  ):
+    assert f'{{"{name}", {{PERSISTENT, INT, "{default}"}}}}' in params_keys
+
+
+def test_hyundai_catalog_hides_longitudinal_pid_settings(settings):
+  groups, by_name, groups_list = group_index(settings)
+  categories = build_menu_categories(settings, by_name)
+  hidden = {"LongTuningKpV", "LongTuningKiV", "LongTuningKf"}
+
+  filtered_groups, filtered_groups_list, filtered_categories, hidden_names = filter_settings_catalog_for_brand(
+    groups, groups_list, categories, "hyundai",
+  )
+  visible_names = {item["name"] for items in filtered_groups.values() for item in items}
+  menu_names = {
+    name
+    for category in filtered_categories
+    for group in category["groups"]
+    for section in group["sections"]
+    for name in section["items"]
+  }
+
+  assert hidden_names == hidden
+  assert hidden.isdisjoint(visible_names)
+  assert hidden.isdisjoint(menu_names)
+  assert all(group["count"] == len(filtered_groups[group["group"]]) for group in filtered_groups_list)
+
+
+def test_other_brands_keep_longitudinal_pid_settings(settings):
+  groups, by_name, groups_list = group_index(settings)
+  categories = build_menu_categories(settings, by_name)
+  filtered_groups, _filtered_groups_list, _filtered_categories, hidden_names = filter_settings_catalog_for_brand(
+    groups, groups_list, categories, "toyota",
+  )
+  visible_names = {item["name"] for items in filtered_groups.values() for item in items}
+
+  assert hidden_names == set()
+  assert {"LongTuningKpV", "LongTuningKiV", "LongTuningKf"} <= visible_names
+
+
+@pytest.mark.parametrize("car_name", [
+  b"HYUNDAI_IONIQ_5_PE",
+  "KIA_EV6",
+  "GENESIS_G80_2ND_GEN_FL",
+])
+def test_vehicle_brand_falls_back_to_hkg_car_name(car_name):
+  class FakeParams:
+    def get(self, name):
+      return {"CarParamsPersistent": None, "CarName": car_name}.get(name)
+
+  assert current_vehicle_brand(FakeParams()) == "hyundai"
+
+
+def test_vehicle_brand_does_not_hide_settings_for_other_car_name():
+  class FakeParams:
+    def get(self, name):
+      return {"CarParamsPersistent": None, "CarName": "TOYOTA_RAV4"}.get(name)
+
+  assert current_vehicle_brand(FakeParams()) == ""
 
 
 def test_c3x_lite_hardware_setting_is_exposed(settings, params):
@@ -126,8 +224,8 @@ def test_vehicle_navi_can_control_is_opt_in(settings, params):
   assert (control["min"], control["max"], control["default"]) == (0, 1, 0)
   assert control["control"] == "toggle"
   assert control["risk"] == "high"
-  assert "PV5에서는 일반 과속카메라와 방지턱만 지원" in control["descr"]
-  assert "average-speed zones are not yet supported" in control["edescr"]
+  assert "PV5는 구간단속 알림 이후 제한속도를 유지" in control["descr"]
+  assert "Average speed and remaining distance are not calculated" in control["edescr"]
 
   driving = next(category for category in settings["menu"] if category["id"] == "DRIVING")
   speed = next(group for group in driving["groups"] if group["id"] == "SPEED")

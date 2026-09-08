@@ -11,6 +11,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_fast_radar import (
   FastRadarOverlay,
   RadarStateOverride,
 )
+from openpilot.selfdrive.controls.lib.longitudinal_stopping_lead import StoppingLeadFilter
 from openpilot.selfdrive.controls.lib.lateral_planner import LateralPlanner
 import openpilot.cereal.messaging as messaging
 from openpilot.selfdrive.carrot.carrot_functions import CarrotPlanner
@@ -29,15 +30,16 @@ def main():
   CP = messaging.log_from_bytes(params.get("CarParams", block=True), car.CarParams)
   cloudlog.info("plannerd got CarParams: %s", CP.brand)
 
-  # The fast path requires stable physical radar identities. Radar source
-  # options are Hyundai-only; other radar-equipped brands always use front
-  # tracks, while radarless cars preserve the model-triggered planner.
+  # Keep Hyundai's existing radar-triggered fast path. Other brands can publish
+  # radar at a different rate (VW MEB: 25 Hz), while the planner integrates at
+  # DT_MDL = 50 ms. Preserve their original modelV2 clock independently of which
+  # radar source supplies the lead observations.
   radar_track_mode = effective_radar_track_mode(
     CP.brand,
     CP.radarUnavailable,
     params.get_int("EnableRadarTracks"),
   )
-  live_tracks_longitudinal = radar_track_mode >= 1
+  live_tracks_longitudinal = CP.brand == "hyundai" and radar_track_mode >= 1
 
   ldw = LaneDepartureWarning()
   longitudinal_planner = LongitudinalPlanner(CP)
@@ -45,10 +47,11 @@ def main():
   fast_radar = FastRadarOverlay(
     front_radar_delay_s=float(CP.radarDelay),
   )
+  stopping_lead_filter = StoppingLeadFilter()
 
   pm = messaging.PubMaster(['longitudinalPlan', 'driverAssistance', 'lateralPlan'])
   # One process owns both planners to avoid another ~100 MB Python runtime.
-  # The two 20 Hz inputs wake this serial loop independently; no MPC overlaps.
+  # Hyundai's two inputs wake this serial loop independently; no MPC overlaps.
   sm = messaging.SubMaster(
     ['carControl', 'carState', 'controlsState', 'liveParameters', 'radarState',
      'liveTracks', 'modelV2', 'selfdriveState', 'carrotMan'],
@@ -116,6 +119,27 @@ def main():
         fast_result = None
         fast_radar_execution_time = 0.0
         planner_sm = sm
+
+      # Apply after the fast overlay, which reconstructs vLead from vEgo+vRel.
+      # Conditioning every ACC input path also covers model-clock fallbacks.
+      stopping_radar_state = stopping_lead_filter.update(
+        planner_sm['radarState'],
+        stopping=(
+          CP.openpilotLongitudinalControl
+          and sm['controlsState'].longControlState == car.CarControl.Actuators.LongControlState.stopping
+          and not sm['selfdriveState'].experimentalMode
+          and getattr(carrot, 'mode', 'acc') == 'acc'
+          and not sm['carState'].gasPressed
+        ),
+        v_ego=sm['carState'].vEgo,
+        mono_time_ns=sm.logMonoTime['liveTracks' if fast_result is not None and fast_result.lead_mask else 'radarState'],
+        valid=(
+          sm.valid['radarState'] and sm.alive['radarState']
+          and sm.valid['carState'] and sm.alive['carState']
+          and (not use_live_tracks_trigger or (sm.valid['liveTracks'] and sm.alive['liveTracks']))
+        ),
+      )
+      planner_sm = RadarStateOverride(planner_sm, stopping_radar_state)
 
       longitudinal_planner.update(planner_sm, carrot)
       planner_execution_time = time.monotonic() - planner_start

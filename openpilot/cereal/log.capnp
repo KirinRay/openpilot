@@ -747,6 +747,8 @@ struct RadarState @0x9a185389d6fdd05f {
     aLead @5 :Float32;
     jLead @16 :Float32;
     score @17 :Float32;
+    cutOutTime @18 :Float32;       # predicted body clearance, seconds; 0 = inactive
+    cutOutConfidence @19 :Float32; # confirmed/ramped future headway relief, 0..1
   }
 
   deprecated :group {
@@ -1226,14 +1228,15 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   fastRadarExecutionTime @54 :Float32;
   fastLeadReason @55 :FastLeadReason;
 
-  # Mode-aware lead preview diagnostics. LongActuatorDelay remains the physical
-  # base delay; leadPreviewSeconds is the bounded signed offset applied only to
-  # aTarget extraction from the already-solved MPC trajectory. Positive means
-  # farther into the future and negative means earlier in the trajectory.
+  # Lead-response diagnostics. LongActuatorDelay remains the physical base
+  # delay; leadPreviewSeconds is the bounded offset used only to request earlier
+  # deceleration from the already-solved MPC trajectory. Positive means farther
+  # into that trajectory. Positive acceleration response changes MPC costs
+  # before solving and is visible through aChangeCost.
   aTargetBase @56 :Float32;
   leadPreviewSeconds @57 :Float32;
   leadPreviewActionTime @58 :Float32;
-  leadPreviewAccel @59 :Float32;  # mode-weighted aLead + jerk lookahead - aEgo contribution
+  leadPreviewAccel @59 :Float32;  # deadbanded aLead - aEgo signal used by deceleration preview
   aChangeCost @60 :Float32;
   trafficStopModelLeadOffset @61 :Float32;  # 0 normally, +2 m for a confirmed model-vehicle stop
 

@@ -8,6 +8,7 @@ import pytest
 
 from openpilot.selfdrive.carrot.radar_motion import model_path_point_at_s
 from openpilot.selfdrive.carrot.radar.tools import radar_lead_validation_review
+from openpilot.selfdrive.carrot.radar.tools import radar_validation_replay
 from openpilot.selfdrive.carrot.radar.tools.radar_lead_simulator import (
   Candidate,
   CurrentRadardSelector,
@@ -65,10 +66,46 @@ from openpilot.selfdrive.carrot.radar.tools.radar_lead_validation_review import 
 from openpilot.selfdrive.carrot.radar.tools.validate_radar_lead_model import (
   _candidate_matches_entry,
   _first_role_constraint_event,
+  _input_coverage,
   _lead_one_continuous,
   _lead_two_continuous,
   _metrics,
 )
+
+
+def test_absent_clear_label_is_not_counted_as_true_negative() -> None:
+  coverage = _input_coverage(
+    [frame((point(2000, 20.0, 3.0, source="corner235"),), time_s=1.0)],
+    {"window": [0.5, 1.5], "source": "corner", "target_track_ids": [1000]},
+  )
+  assert coverage == dict(valid=False, sample_frames=1, target_frames=0, scope="target", reason="labelled_target_absent")
+  metrics = _metrics([dict(expected="clear", shadow_event=None, input_valid=coverage['valid'])], "shadow_event")
+  assert metrics['labels'] == metrics['tn'] == 0
+  assert metrics['unverified_labels'] == 1
+
+
+def test_label_input_coverage_requires_measured_target_in_the_named_sensor() -> None:
+  entry = dict(window=[0.5, 1.5], source="corner", target_track_ids=[1000])
+  samples = [frame((point(1000, 20.0, 3.0, source="frontRadar"),), time_s=1.0)]
+  assert not _input_coverage(samples, entry)['valid']
+  samples.append(frame((point(1000, 20.0, 3.0, source="corner235", measured=False),), time_s=1.1))
+  assert not _input_coverage(samples, entry)['valid']
+  samples.append(frame((point(1000, 20.0, 3.0, source="corner235"),), time_s=1.2))
+  assert _input_coverage(samples, entry)['target_frames'] == 1
+
+
+def test_unscoped_clear_window_does_not_require_a_radar_target():
+  entry = dict(window=[0.5, 1.5], source="front+corner")
+  assert _input_coverage([frame((), time_s=1.0)], entry)['valid']
+  assert not _input_coverage([frame((), time_s=2.0)], entry)['valid']
+
+
+def test_spatial_only_label_does_not_match_unrelated_input():
+  entry = dict(window=[0.5, 1.5], source="corner", target_spatial_match=dict(d_rel=[15.0, 25.0], y_rel=[2.0, 4.0]))
+  wrong_side = point(1000, 20.0, -3.0, source="corner235")
+  assert not _input_coverage([frame((wrong_side,), time_s=1.0)], entry)['valid']
+  target = point(1000, 20.0, 3.0, source="corner235")
+  assert _input_coverage([frame((target,), time_s=1.0)], entry)['valid']
 
 
 def point(
@@ -272,6 +309,31 @@ def test_visual_review_starts_with_production_and_cycles_old_versions(
   assert ui.occupancy_version == 4
   assert ui.selector is ui.production_selector
   assert ui.selector.motion_sensor == "front"
+
+
+def test_legacy_corner_id_recovery_is_explicitly_brand_gated() -> None:
+  encoded = SimpleNamespace(
+    trackId=380,
+    radarSource="frontRadar",
+    dRel=35.0,
+    yRel=0.1,
+    vRel=-6.0,
+    aRel=0.0,
+    yvRel=0.0,
+    vLead=22.0,
+    measured=True,
+    aLead=0.0,
+    jLead=0.0,
+    trackState=0,
+  )
+
+  normal = radar_validation_replay._copy_track_points((encoded,))
+  legacy_hyundai = radar_validation_replay._copy_track_points(
+    (encoded,), allow_legacy_corner_ids=True,
+  )
+
+  assert normal[0].source == "frontRadar"
+  assert legacy_hyundai[0].source == "corner430"
 
 
 def test_visual_replay_cache_round_trip_and_exact_configuration(tmp_path) -> None:
@@ -1302,6 +1364,19 @@ def test_validation_lead_one_continuity_rejects_a_single_missing_frame() -> None
     frames,
     {"lead_one_continuous_window": [0.0, 0.1]},
   )
+
+
+@pytest.mark.parametrize("middle_id", (-1, 36, None, 35))
+def test_validation_continuity_requires_the_requested_radar_on_every_frame(middle_id):
+  frames = [frame((), time_s=index * 0.05) for index in range(3)]
+  leads = [Candidate(track_id, 1.0, "L1", d_rel=80.0)
+           if track_id is not None else None for track_id in (35, middle_id, 35)]
+  selector = SimpleNamespace(select=lambda _frame, index: Selection(leads[index], None))
+  entry = {
+    "lead_one_continuous_window": [0.0, 0.1],
+    "required_lead_one_ids": [35],
+  }
+  assert _lead_one_continuous(selector, frames, entry) == (middle_id == 35)
 
 
 def test_vision_only_lead_one_uses_blue_instead_of_radar_orange() -> None:
