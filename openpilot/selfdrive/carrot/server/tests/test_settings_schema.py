@@ -15,13 +15,14 @@ from openpilot.selfdrive.carrot.server.services.settings import (
   current_vehicle_brand,
   filter_settings_catalog_for_brand,
   group_index,
+  with_vehicle_gap_limits,
 )
 
 SETTINGS_PATH = Path(__file__).resolve().parents[3] / "carrot_settings.json"
 PARAMS_KEYS_PATH = Path(__file__).resolve().parents[4] / "common" / "params_keys.h"
 
 # Mirrors SETTING_DISPLAY_UNIT_TYPES / SETTING_CONTROL_KINDS in setting.js.
-KNOWN_DISPLAY_UNITS = {"raw", "speedKph", "distanceCm", "timeSec", "timeMin", "percent", "degree"}
+KNOWN_DISPLAY_UNITS = {"raw", "speedKph", "distanceCm", "timeSec", "timeMs", "timeMin", "percent", "degree"}
 KNOWN_CONTROL_KINDS = {"toggle", "segmented", "select", "slider"}
 KNOWN_RISK_LEVELS = {"high", "medium"}
 
@@ -42,7 +43,55 @@ def test_the_catalogue_is_readable_and_populated(params):
   assert all(isinstance(p.get("name"), str) and p["name"] for p in params)
 
 
-def test_onnx_vision_toggle_uses_existing_runtime_flag_and_lane_change_menu(settings, params):
+@pytest.mark.parametrize("maximum", (3, 4))
+def test_gap_cycle_catalog_uses_vehicle_maximum_without_mutating_cache(settings, maximum):
+  groups, by_name, groups_list = group_index(settings)
+  original = by_name["CruiseGapLevels"]
+  data, adapted_groups, adapted_names, _ = with_vehicle_gap_limits((settings, groups, by_name, groups_list), maximum)
+  selected = adapted_names["CruiseGapLevels"]
+  assert (selected["min"], selected["max"], selected["default"]) == (2, maximum, maximum)
+  assert all(len(options) == maximum - 1 for options in selected["options"].values())
+  from openpilot.selfdrive.carrot.server.services.params import clamp_numeric
+  assert clamp_numeric(4, selected) == maximum
+  assert clamp_numeric(1, selected) == 2
+  assert next(p for p in data["params"] if p["name"] == "CruiseGapLevels") is selected
+  assert next(p for p in adapted_groups[selected["group"]] if p["name"] == "CruiseGapLevels") is selected
+  assert (original["max"], original["default"]) == (4, 4)
+  assert all(len(options) == 3 for options in original["options"].values())
+
+
+@pytest.mark.parametrize("maximum,stored,expected", ((3, 4, 3), (4, 4, 4), (3, 2, 2), (4, 3, 3), (3, 0, 3)))
+def test_gap_cycle_read_matches_vehicle_limit(monkeypatch, maximum, stored, expected):
+  from openpilot.selfdrive.carrot.server.services import params as service
+  class FakeParams:
+    def get_int(self, key):
+      return maximum
+  monkeypatch.setattr(service, "HAS_PARAMS", True)
+  monkeypatch.setattr(service, "Params", FakeParams)
+  monkeypatch.setattr(service, "_read_param_value", lambda params, name, default: stored)
+  assert service.get_param_values(["CruiseGapLevels"], {"CruiseGapLevels": maximum}) == {"CruiseGapLevels": expected}
+
+
+def test_gap_cycle_setting_is_registered_and_in_gap_menu(settings):
+  assert '{"CruiseGapLevels", {PERSISTENT, INT, "4"}}' in PARAMS_KEYS_PATH.read_text(encoding="utf-8")
+  groups, by_name, _ = group_index(settings)
+  categories = build_menu_categories(settings, by_name)
+  section = next(section for category in categories for group in category["groups"] for section in group["sections"]
+                 if "TFollowGap1" in section["items"])
+  assert section["items"].index("CruiseGapLevels") < section["items"].index("TFollowGap1")
+
+
+def test_rear_camera_hold_uses_meter_values_and_persistent_default(settings, params):
+  hold = next(p for p in params if p["name"] == "AutoNaviRearCameraHoldDistance")
+  assert (hold["min"], hold["max"], hold["default"], hold["unit"]) == (0, 300, 100, 10)
+  assert '"AutoNaviRearCameraHoldDistance", {PERSISTENT, INT, "100"}' in PARAMS_KEYS_PATH.read_text(encoding="utf-8")
+  driving = next(category for category in settings["menu"] if category["id"] == "DRIVING")
+  speed = next(group for group in driving["groups"] if group["id"] == "SPEED")
+  cameras = next(group for group in speed["groups"] if group["id"] == "SPEED_CAMERA")
+  assert hold["name"] in cameras["params"]
+
+
+def test_onnx_vision_toggle_uses_existing_runtime_flag_and_first_steering_section(settings, params):
   by_name = {p["name"]: p for p in params}
   vision = by_name["ShareData"]
   assert (vision["control"], vision["min"], vision["max"], vision["default"]) == ("toggle", 0, 1, 0)
@@ -50,8 +99,19 @@ def test_onnx_vision_toggle_uses_existing_runtime_flag_and_lane_change_menu(sett
   assert '{"ShareData", {PERSISTENT, INT, "0"}}' in PARAMS_KEYS_PATH.read_text(encoding="utf-8")
   driving = next(category for category in settings["menu"] if category["id"] == "DRIVING")
   steering = next(group for group in driving["groups"] if group["id"] == "STEER")
+  onnx = steering["groups"][0]
   lane_change = next(group for group in steering["groups"] if group["id"] == "STEER_LANECHANGE")
-  assert "ShareData" in lane_change["params"]
+  assert onnx["id"] == "STEER_ONNX"
+  detail_names = [
+    "OnnxLaneThreshold", "OnnxLaneIntervalMs", "OnnxBsdThreshold",
+    "OnnxBsdSmoothingMs", "OnnxBsdIntervalMs",
+  ]
+  assert onnx["params"] == ["ShareData", *detail_names]
+  assert "ShareData" not in lane_change["params"]
+  for name in detail_names:
+    assert by_name[name]["detail_parent"] == "ShareData"
+    assert by_name[name]["detail_section"] in ("lane", "bsd")
+    assert f'{{"{name}", {{PERSISTENT, INT,' in PARAMS_KEYS_PATH.read_text(encoding="utf-8")
   for title in ("title", "etitle", "ctitle"):
     assert "ONNX" in vision[title]
 
@@ -81,37 +141,34 @@ def test_automatic_driving_mode_exposes_manual_normal_and_eco_choices(params):
 def test_longitudinal_comfort_settings_use_driver_facing_language(params):
   by_name = {p["name"]: p for p in params}
 
-  lead_response = by_name["DynamicTFollow"]
-  assert lead_response["default"] == 0
-  assert lead_response["display_unit"] == "percent"
-  assert "0%는 사용 안 함" in lead_response["descr"]
+  assert "DynamicTFollow" not in by_name
 
   lead_accel_response = by_name["LeadAccelResponse"]
   assert (lead_accel_response["min"], lead_accel_response["max"], lead_accel_response["default"]) == (0, 5, 0)
   assert lead_accel_response["control"] == "select"
-  assert "모든 차간거리 단계" in lead_accel_response["descr"]
-  assert "170/130/80/36/10" in lead_accel_response["descr"]
-  assert "95/80/60/35/15%" in lead_accel_response["descr"]
-  assert "MPC 뒤에 가속을 별도로 더하지 않으며" in lead_accel_response["descr"]
-  assert "CruiseMaxVals" in lead_accel_response["descr"]
-  assert "설정 TF에 도달" in lead_accel_response["descr"]
-  assert lead_accel_response["options"]["ko"][3] == "3 경쾌함(추천)"
+  assert all(lead_accel_response[key].strip() for key in ("descr", "edescr", "cdescr"))
+  assert lead_accel_response["options"]["ko"][3] == "3 균형 추종"
   assert lead_accel_response["options"]["ko"][-1] == "5 최대 추종(시험)"
 
   params_keys = PARAMS_KEYS_PATH.read_text(encoding="utf-8")
   assert '{"LeadAccelResponse", {PERSISTENT, INT, "0"}}' in params_keys
+  assert '{"DynamicTFollow",' not in params_keys
 
   lane_change = by_name["DynamicTFollowLC"]
   assert lane_change["default"] == 100
-  assert "100%는 변화 없음" in lane_change["descr"]
-
-  decel_margin = by_name["TFollowDecelBoost"]
-  assert decel_margin["default"] == 50
-  assert "목표 간격" in decel_margin["descr"]
+  assert "100은 추가 완화 없음" in lane_change["descr"]
 
   driving_mode = by_name["MyDrivingMode"]
   assert "ComfortBrake" not in driving_mode["descr"]
   assert "멀리서부터 천천히 감속" in driving_mode["descr"]
+
+
+def test_deceleration_gap_margin_defaults_match_registry(params):
+  decel_margin = next(p for p in params if p["name"] == "TFollowDecelBoost")
+  assert decel_margin["default"] == 0
+  assert "목표 간격" in decel_margin["descr"]
+  params_keys = PARAMS_KEYS_PATH.read_text(encoding="utf-8")
+  assert '{"TFollowDecelBoost", {PERSISTENT, INT, "0"}}' in params_keys
 
 
 def test_longitudinal_pid_defaults_match_registry(params):
@@ -153,7 +210,10 @@ def test_hyundai_catalog_hides_longitudinal_pid_settings(settings):
   assert hidden_names == hidden
   assert hidden.isdisjoint(visible_names)
   assert hidden.isdisjoint(menu_names)
-  assert all(group["count"] == len(filtered_groups[group["group"]]) for group in filtered_groups_list)
+  assert all(
+    group["count"] == sum(1 for item in filtered_groups[group["group"]] if not item.get("detail_parent"))
+    for group in filtered_groups_list
+  )
 
 
 def test_other_brands_keep_longitudinal_pid_settings(settings):
@@ -218,14 +278,15 @@ def test_wide_camera_fallback_setting_is_exposed(settings, params):
   assert '{"UseWideCamera", {PERSISTENT, BOOL, "1"}}' in params_keys
 
 
-def test_vehicle_navi_can_control_is_opt_in(settings, params):
+def test_vehicle_navi_can_control_exposes_route_filter_modes(settings, params):
   by_name = {p["name"]: p for p in params}
   control = by_name["VehicleNaviCanControl"]
-  assert (control["min"], control["max"], control["default"]) == (0, 1, 0)
-  assert control["control"] == "toggle"
+  assert (control["min"], control["max"], control["default"]) == (0, 3, 0)
+  assert control["control"] == "select"
+  assert all(len(control["options"][locale]) == 4 for locale in ("ko", "en", "zh"))
   assert control["risk"] == "high"
-  assert "PV5는 구간단속 알림 이후 제한속도를 유지" in control["descr"]
-  assert "Average speed and remaining distance are not calculated" in control["edescr"]
+  assert "calculated route" in control["edescr"]
+  assert "VehicleSpeedCameraControlMode" in control["edescr"]
 
   driving = next(category for category in settings["menu"] if category["id"] == "DRIVING")
   speed = next(group for group in driving["groups"] if group["id"] == "SPEED")
@@ -233,7 +294,23 @@ def test_vehicle_navi_can_control_is_opt_in(settings, params):
   assert "VehicleNaviCanControl" in camera["params"]
 
   params_keys = PARAMS_KEYS_PATH.read_text(encoding="utf-8")
-  assert '{"VehicleNaviCanControl", {PERSISTENT, BOOL, "0"}}' in params_keys
+  assert '{"VehicleNaviCanControl", {PERSISTENT, INT, "0"}}' in params_keys
+
+
+def test_speed_bump_early_release_distance_is_exposed_in_centimeters(settings, params):
+  by_name = {p["name"]: p for p in params}
+  distance = by_name["AutoNaviSpeedBumpEndDistance"]
+  assert (distance["min"], distance["max"], distance["default"], distance["unit"]) == (0, 5000, 200, 10)
+  assert distance["display_unit"] == "distanceCm"
+  assert distance["risk"] == "high"
+
+  driving = next(category for category in settings["menu"] if category["id"] == "DRIVING")
+  speed = next(group for group in driving["groups"] if group["id"] == "SPEED")
+  bump = next(group for group in speed["groups"] if group["id"] == "SPEED_BUMP")
+  assert "AutoNaviSpeedBumpEndDistance" in bump["params"]
+
+  params_keys = PARAMS_KEYS_PATH.read_text(encoding="utf-8")
+  assert '{"AutoNaviSpeedBumpEndDistance", {PERSISTENT, INT, "200"}}' in params_keys
 
 
 def test_vehicle_navi_school_zone_control_is_opt_in(settings, params):

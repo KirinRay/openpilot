@@ -26,12 +26,14 @@ CLUSTER_SAMPLE_RATE = 20  # frames
 VEHICLE_SPEED_CAMERA_PARAM_UPDATE_FRAMES = round(1.0 / DT_CTRL)
 VEHICLE_NAVI_MAX_EVENT_DISTANCE = 2500.0
 VEHICLE_NAVI_PASSED_EVENT_DISTANCE = 30.0
+VEHICLE_NAVI_CAMERA_MATCH_MARGIN = 40.0
 VEHICLE_NAVI_MAX_EVENTS = 32
 VEHICLE_NAVI_CAMERA_KINDS = (0, 1, 2)
 VEHICLE_NAVI_CONTROLLED_ACCESS_LINK_CLASSES = (1, 2, 3)  # Freeway, IC, JC
 VEHICLE_NAVI_CONTROLLED_ACCESS_ROAD_CLASSES = (1, 2)  # Freeway, arterial/city freeway
 VEHICLE_NAVI_SCHOOL_ZONE_MAX_DISTANCE = 1000.0
 VEHICLE_NAVI_POSITION_TIMEOUT_NS = 1_000_000_000
+VEHICLE_NAVI_ROUTE_TIMEOUT_NS = 2_000_000_000
 CANFD_HDA_INFO_MSG = "CANFD_HDA_INFO_364"
 CANFD_NAVI_PROFILE_MSG = "CANFD_NAVI_PROFILE_093"
 CANFD_NAVI_STATUS_MSG = "CANFD_NAVI_STATUS_380"
@@ -218,7 +220,7 @@ class CarState(CarStateBase):
     self.speedLimitDistance = 0
     distance_time_tenths = self.op_params.get_int("VehicleSpeedCameraDistanceTime")
     self.vehicleSpeedCameraDistanceTime = self._vehicle_speed_camera_distance_time(distance_time_tenths)
-    self.vehicleNaviCanControl = self.op_params.get_bool("VehicleNaviCanControl")
+    self.vehicleNaviCanControl = self._vehicle_navi_can_control_mode(self.op_params.get_int("VehicleNaviCanControl"))
     self.vehicleNaviSchoolZoneControl = self.op_params.get_bool("VehicleNaviSchoolZoneControl")
     self.vehicleSpeedCameraParamsCounter = 0
     self.vehicleNaviEvents = []
@@ -226,9 +228,13 @@ class CarState(CarStateBase):
     self.vehicleNaviProfileTimestamp = 0
     self.vehicleNaviAvailable = False
     self.vehicleNaviRouteResetTimestamp = 0
+    self.vehicleNaviRouteState = 0
+    self.vehicleNaviRoutePathIndex = None
     self.vehicleNaviRoadClass = 7
     self.vehicleNaviCameraTarget = None
     self.vehicleNaviCameraStatusEvent = None
+    self.vehicleNaviCameraStatusSpeed = 0.0
+    self.vehicleNaviCameraStatusTarget = None
     self.vehicleNaviSpeedZoneActive = False
     self.vehicleNaviSpeedZoneSpeed = 0.0
     self.vehicleNaviSchoolZoneActive = False
@@ -621,6 +627,10 @@ class CarState(CarStateBase):
   def _vehicle_speed_camera_distance_time(raw_value):
     return min(200, max(10, raw_value)) / 10.0
 
+  @staticmethod
+  def _vehicle_navi_can_control_mode(raw_value):
+    return min(3, max(0, raw_value))
+
   def _update_vehicle_speed_camera_params(self):
     self.vehicleSpeedCameraParamsCounter += 1
     if self.vehicleSpeedCameraParamsCounter < VEHICLE_SPEED_CAMERA_PARAM_UPDATE_FRAMES:
@@ -631,12 +641,16 @@ class CarState(CarStateBase):
     distance_time = self._vehicle_speed_camera_distance_time(distance_time_tenths)
     changed = distance_time != self.vehicleSpeedCameraDistanceTime
     self.vehicleSpeedCameraDistanceTime = distance_time
-    vehicle_navi_can_control = self.op_params.get_bool("VehicleNaviCanControl")
+    if changed and self.vehicleNaviCameraStatusTarget is not None:
+      self.vehicleNaviCameraStatusTarget = self.totalDistance + self.vehicleNaviCameraStatusSpeed * distance_time
+    vehicle_navi_can_control = self._vehicle_navi_can_control_mode(self.op_params.get_int("VehicleNaviCanControl"))
     if vehicle_navi_can_control != self.vehicleNaviCanControl:
       self.vehicleNaviCanControl = vehicle_navi_can_control
       if not vehicle_navi_can_control:
         self._clear_vehicle_navi_events()
         self._clear_vehicle_navi_speed_zone()
+      elif vehicle_navi_can_control >= 2:
+        self._clear_vehicle_navi_route_filtered_events()
     vehicle_navi_school_zone_control = self.op_params.get_bool("VehicleNaviSchoolZoneControl")
     if vehicle_navi_school_zone_control != self.vehicleNaviSchoolZoneControl:
       self.vehicleNaviSchoolZoneControl = vehicle_navi_school_zone_control
@@ -648,6 +662,18 @@ class CarState(CarStateBase):
     self.vehicleNaviEvents = []
     self.vehicleNaviCameraTarget = None
     self.vehicleNaviCameraStatusEvent = None
+
+  def _clear_vehicle_navi_route_filtered_events(self):
+    if self.vehicleNaviCanControl < 2:
+      return
+
+    filtered_types = ("bump",) if self.vehicleNaviCanControl == 2 else ("camera", "bump")
+    self.vehicleNaviEvents = [event for event in self.vehicleNaviEvents if event["type"] not in filtered_types]
+    if self.vehicleNaviCameraStatusEvent is not None and self.vehicleNaviCameraStatusEvent not in self.vehicleNaviEvents:
+      self.vehicleNaviCameraStatusEvent = None
+      self.vehicleNaviCameraTarget = None
+    if self.vehicleNaviCanControl == 3:
+      self._clear_vehicle_navi_speed_zone()
 
   def _clear_vehicle_navi_school_zone(self):
     self.vehicleNaviSchoolZoneActive = False
@@ -723,8 +749,23 @@ class CarState(CarStateBase):
       "offset": int(values.get("PROLONG_OFFSET", 8191)),
       "counter": int(values.get("PROLONG_CYCLIC_COUNTER", 0)),
       "update": int(values.get("PROLONG_UPDATE", 0)),
+      "path_index": int(values.get("PROLONG_PATH_INDEX", 0)),
       "profile_type": int(values.get("PROLONG_PROFILE_TYPE", 31)),
     }
+
+  def _vehicle_navi_profile_allowed(self, event_type, profile):
+    if not self.vehicleNaviCanControl:
+      return False
+
+    # Mode 1 accepts all future profiles. Mode 2 route-gates bumps, and mode 3
+    # route-gates cameras and bumps. A route-gated profile must belong to the
+    # currently calculated path reported by 0x4B9.
+    route_required = (self.vehicleNaviCanControl == 3 or
+                      (self.vehicleNaviCanControl == 2 and event_type == "bump"))
+    if not route_required:
+      return True
+    return (self.vehicleNaviRouteState == 1 and
+            profile["path_index"] == self.vehicleNaviRoutePathIndex)
 
   @staticmethod
   def _classify_vehicle_navi_profile(profile):
@@ -775,6 +816,14 @@ class CarState(CarStateBase):
     ret.vehicleNaviAvailable = self.vehicleNaviAvailable
     self.vehicleNaviCameraTarget = None
 
+    # Track the current warning independently of future 0x4BE previews. A new
+    # warning must not inherit a distant preview's virtual-distance origin.
+    camera_status_speed = ret.speedLimit if speed_limit_cam else 0
+    if camera_status_speed != self.vehicleNaviCameraStatusSpeed:
+      self.vehicleNaviCameraStatusTarget = (self.totalDistance + camera_status_speed * self.vehicleSpeedCameraDistanceTime
+                                            if camera_status_speed > 0 else None)
+      self.vehicleNaviCameraStatusSpeed = camera_status_speed
+
     # 0x4B4 is periodic while the stock navigation is running. Its range
     # average speed is zero outside a section-camera zone and valid inside it.
     # It is therefore authoritative for the *current* section state; 0x4BE is
@@ -792,6 +841,11 @@ class CarState(CarStateBase):
       if timestamp > self.vehicleNaviSegmentTimestamp:
         self.vehicleNaviSegmentTimestamp = timestamp
         segment = self._decode_vehicle_navi_segment(self.navi_segment_4b9)
+        previous_route_state = self.vehicleNaviRouteState
+        previous_path_index = self.vehicleNaviRoutePathIndex
+        self.vehicleNaviRouteState = segment["calculated_route"]
+        self.vehicleNaviRoutePathIndex = (segment["path_index"]
+                                          if segment["calculated_route"] in (0, 1) else None)
         if segment["functional_road_class"] != 7:
           self.vehicleNaviRoadClass = segment["functional_road_class"]
         if segment["calculated_route"] == 2:
@@ -799,6 +853,17 @@ class CarState(CarStateBase):
           self._clear_vehicle_navi_events()
           self._clear_vehicle_navi_speed_zone()
           self._clear_vehicle_navi_school_zone()
+        elif (self.vehicleNaviCanControl >= 2 and
+              (segment["calculated_route"] != 1 or
+               (previous_route_state == 1 and previous_path_index != segment["path_index"]))):
+          self._clear_vehicle_navi_route_filtered_events()
+
+    route_age = getattr(cp, "_last_update_nanos", max(profile_timestamp, self.vehicleNaviSegmentTimestamp)) - self.vehicleNaviSegmentTimestamp
+    if (self.vehicleNaviCanControl >= 2 and self.vehicleNaviRouteState == 1 and
+        (route_age < 0 or route_age > VEHICLE_NAVI_ROUTE_TIMEOUT_NS)):
+      self.vehicleNaviRouteState = 0
+      self.vehicleNaviRoutePathIndex = None
+      self._clear_vehicle_navi_route_filtered_events()
 
     on_controlled_access_road = self._vehicle_navi_is_controlled_access_road()
     if on_controlled_access_road:
@@ -815,7 +880,7 @@ class CarState(CarStateBase):
         if event is not None and timestamp > self.vehicleNaviRouteResetTimestamp:
           if event[0] == "speed_limit_zone":
             if self.vehicleNaviZoneControlSupported:
-              if self.vehicleNaviCanControl and event[1] > 30:
+              if self._vehicle_navi_profile_allowed("camera", profile) and event[1] > 30:
                 self.vehicleNaviSpeedZoneActive = True
                 self.vehicleNaviSpeedZoneSpeed = event[1]
               if self.vehicleNaviSchoolZoneControl:
@@ -828,8 +893,8 @@ class CarState(CarStateBase):
                   self.vehicleNaviSchoolZoneUsesCameraStatus = True
                 else:
                   self._clear_vehicle_navi_school_zone()
-          elif self.vehicleNaviCanControl and (not on_controlled_access_road or
-                                               (event[0] != "bump" and not (event[0] == "camera" and event[1] == 30))):
+          elif self._vehicle_navi_profile_allowed(event[0], profile) and (not on_controlled_access_road or
+                                                                          (event[0] != "bump" and not (event[0] == "camera" and event[1] == 30))):
             self._add_vehicle_navi_event(*event, profile["offset"])
 
     if position_seen:
@@ -847,9 +912,10 @@ class CarState(CarStateBase):
     # 0x4BE announces cameras far enough ahead to start a smooth deceleration,
     # but its offset can point 30-40 m beyond the physical camera. Associate
     # the stock 0x4A3 camera status with the matching queued event and retire
-    # that event as soon as the status ends. This preserves the early 0x4BE
-    # preview while restoring speed at the vehicle's own camera pass point.
-    camera_status_speed = ret.speedLimit if speed_limit_cam else 0
+    # that event as soon as the status ends. A same-speed profile beyond the
+    # warning's initial virtual endpoint (plus offset margin) is a future
+    # preview, not evidence of the current camera's distance. Keep this bound
+    # fixed in traveled-distance coordinates so later profiles cannot extend it.
     status_event = self.vehicleNaviCameraStatusEvent
     if speed_limit_cam:
       if status_event is not None and status_event["speed"] != camera_status_speed:
@@ -858,7 +924,8 @@ class CarState(CarStateBase):
       if status_event is None:
         matching_cameras = [event for event in self.vehicleNaviEvents
                             if event["type"] == "camera" and event["speed"] == camera_status_speed and
-                            event["target"] >= self.totalDistance - VEHICLE_NAVI_PASSED_EVENT_DISTANCE]
+                            self.totalDistance - VEHICLE_NAVI_PASSED_EVENT_DISTANCE <= event["target"] <=
+                            (self.vehicleNaviCameraStatusTarget or self.totalDistance) + VEHICLE_NAVI_CAMERA_MATCH_MARGIN]
         if matching_cameras:
           status_event = matching_cameras[0]
       self.vehicleNaviCameraStatusEvent = status_event
@@ -920,7 +987,14 @@ class CarState(CarStateBase):
     self.totalDistance += ret.vEgo * DT_CTRL
     if ret.speedLimit > 0 and speed_limit_cam and self.vehicleNaviCanControl and self.vehicleNaviCameraTarget is not None:
       self.speedLimitDistance = self.vehicleNaviCameraTarget
-      ret.speedLimitDistance = max(0.0, self.speedLimitDistance - self.totalDistance)
+      ret.speedLimitDistance = max(1.0 if self.vehicleNaviCameraStatusTarget is not None else 0.0,
+                                   self.speedLimitDistance - self.totalDistance)
+    elif ret.speedLimit > 0 and speed_limit_cam and self.vehicleNaviCameraStatusTarget is not None:
+      # No nearby matching profile: use the current warning's own fallback.
+      # Keep the cap at its endpoint until the warning ends; never restart a
+      # full virtual distance or attach a later, far-away same-speed camera.
+      self.speedLimitDistance = self.vehicleNaviCameraStatusTarget
+      ret.speedLimitDistance = max(1.0, self.speedLimitDistance - self.totalDistance)
     elif ret.speedLimit > 0 and speed_limit_cam:
       if distance_time_changed or self.speedLimitDistance <= self.totalDistance:
         self.speedLimitDistance = self.totalDistance + ret.speedLimit * self.vehicleSpeedCameraDistanceTime

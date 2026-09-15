@@ -10,8 +10,10 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.modeld.constants import index_function
 from openpilot.selfdrive.controls.radar_constants import LEAD_ACCEL_TAU
 from openpilot.selfdrive.carrot.traffic_stop import get_traffic_stop_distance_adjust, get_traffic_stop_obstacle_distance
-from openpilot.selfdrive.controls.lib.longitudinal_preview import LEAD_ACCEL_MIN_TRACK_FRAMES, get_lead_accel_mpc_request
+from openpilot.selfdrive.controls.lib.longitudinal_preview import LEAD_ACCEL_MIN_TRACK_FRAMES, LeadAccelResponseState, get_lead_accel_mpc_request
 from openpilot.selfdrive.controls.lib.longitudinal_cutout import cutout_obstacle_relief
+from openpilot.selfdrive.controls.lib.longitudinal_gap_recovery import LeadGapState, gap_reference, displayed_follow_distance
+from openpilot.selfdrive.carrot.radar_motion.lane_change_gap import LaneChangeGapPlan
 
 if __name__ == '__main__':  # generating code
   from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
@@ -286,6 +288,9 @@ class LongitudinalMpc:
     self.lead_accel_response_active = False
     self.lead_accel_response_level = 0
     # timers
+    self.lead_response_state = LeadAccelResponseState()
+    self.lead_gap_states = (LeadGapState(), LeadGapState())
+    self.lead_gap_margins = np.zeros((N+1, 2))
     self.solve_time = 0.0
     self.time_qp_solution = 0.0
     self.time_linearization = 0.0
@@ -393,28 +398,15 @@ class LongitudinalMpc:
              jerk_factor=1.0,
              a_change_cost_starting=A_CHANGE_COST_STARTING,
              lead_accel_response_enabled=False,
+             lead_gap_enabled=False,
              lead_track_frames=(0, 0),
              measured_a_ego=0.0,
              cutout_relief_enabled=False):
     v_ego = self.x0[1]
     a_ego = self.x0[2]
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
-    # Use the previous cycle's controlling radar lead for the level 4-5 configured-TF
-    # exception. Cruise can be the MPC source while a valid lead pulls away.
-    # Requiring an opening gap avoids shrinking TF while ego is still closing.
-    tf_lead = radarstate.leadOne if self.source in ('lead0', 'cruise') else radarstate.leadTwo if self.source == 'lead1' else None
-    tf_lead_valid = (
-      tf_lead is not None
-      and tf_lead.status
-      and tf_lead.radar
-      and tf_lead.radarTrackId >= 0
-      and tf_lead.vRel >= 0.0
-    )
-    t_follow = carrot.get_T_FOLLOW(
-      personality, v_ego, a_ego,
-      lead_status=tf_lead_valid,
-      lead_accel=tf_lead.aLeadK if tf_lead_valid else 0.0,
-    )
+    t_follow = carrot.get_T_FOLLOW(personality, v_ego, a_ego)
+    jerk_factor = carrot.jerk_factor
 
     lead_xv_0, lead_v_0 = self.process_lead(radarstate.leadOne)
     lead_xv_1, lead_v_1 = self.process_lead(radarstate.leadTwo)
@@ -431,16 +423,12 @@ class LongitudinalMpc:
       stop_x = 1000.0
     else:
       v_cruise, stop_x, mode = carrot.v_cruise, carrot.stop_dist, carrot.mode
-      desired_distance = desired_follow_distance(v_ego, lead_v_0, comfort_brake, stop_distance, t_follow)
-      t_follow = carrot.dynamic_t_follow(t_follow, radarstate.leadOne, desired_distance, self.prev_a)
 
     # To estimate a safe distance from a moving lead, we calculate how much stopping
     # distance that lead needs as a minimum. We can add that to the current distance
     # and then treat that as a stopped car/obstacle at this new distance.
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
-
-    self.desired_distance = desired_follow_distance(v_ego, lead_v_0, comfort_brake, stop_distance, t_follow)
 
     self.params[:,0] = ACCEL_MIN if not reset_state else a_ego
     # negative accel constraint causes problems because negative speed is not allowed
@@ -467,12 +455,20 @@ class LongitudinalMpc:
       traffic_stop_obstacle = get_traffic_stop_obstacle_distance(stop_x, cruise_obstacle[0], adjust_dist)
       x2 = traffic_stop_obstacle * np.ones(N+1)
 
+      lane_change = getattr(carrot, 'lane_change_gap', LaneChangeGapPlan())
       lead_0_follow_obstacle = lead_0_obstacle
       if cutout_relief_enabled and not reset_state:
-        lead_0_follow_obstacle = lead_0_obstacle + cutout_obstacle_relief(
-          radarstate.leadOne, v_ego, T_IDXS, t_follow, stop_distance,
-        )
+        if lane_change.active:
+          lead_0_follow_obstacle = lead_0_obstacle + lane_change.credit(
+            radarstate.leadOne, T_IDXS, v_ego, self.max_a, t_follow, stop_distance, carrot.dynamicTFollowLC,
+          )
+        else:
+          lead_0_follow_obstacle = lead_0_obstacle + cutout_obstacle_relief(
+            radarstate.leadOne, v_ego, T_IDXS, t_follow, stop_distance,
+          )
       x_obstacles = np.column_stack([lead_0_follow_obstacle, lead_1_obstacle, cruise_obstacle, x2])
+      # Only currently selected leadOne/leadTwo may constrain braking.
+      # Entry snapshots and lane-change credit guards never add obstacles.
       self.source = SOURCES[np.argmin(x_obstacles[0])]
 
       if v_cruise == 0 and self.source == 'cruise':
@@ -533,6 +529,7 @@ class LongitudinalMpc:
       gap_margin=response_gap_margin,
       speed_error=v_cruise - v_ego,
     )
+    response_request = self.lead_response_state.update(response_request, self.dt, response_lead.radarTrackId)
     self.lead_accel_response_active = response_request.active
     self.lead_accel_response_level = response_request.level if response_request.active else 0
     self.set_weights(
@@ -544,6 +541,35 @@ class LongitudinalMpc:
       jerk_cost_factor=response_request.jerk_cost_factor,
     )
 
+    # Extra TF is a comfort preference, not a change to physical lead obstacles,
+    # base TF, cruise/map targets or braking constraints. Level 5 adds no margin.
+    gap_v = np.maximum(0.0, self.x_sol[:,1] + v_ego - self.x_sol[0,1])
+    gap_x = np.cumsum(np.diff(T_IDXS, prepend=0.0) * np.concatenate(([gap_v[0]], (gap_v[1:] + gap_v[:-1]) * 0.5)))
+    self.lead_gap_margins[:] = 0.0
+    for lead_index, (lead, lead_xv) in enumerate(((radarstate.leadOne, lead_xv_0), (radarstate.leadTwo, lead_xv_1))):
+      eligible = (
+        mode == 'acc' and lead_gap_enabled and not reset_state
+        and not getattr(carrot, 'lane_change_active', False)
+        and len(lead_track_frames) > lead_index and lead_track_frames[lead_index] >= LEAD_ACCEL_MIN_TRACK_FRAMES
+        and lead.status and lead.radar
+      )
+      state = self.lead_gap_states[lead_index]
+      state.update(level=carrot.leadAccelResponse, track_id=lead.radarTrackId, enabled=eligible, dt=self.dt,
+                   ego_speed=v_ego, lead_speed=lead.vLead if eligible else 0.0, relative_speed=lead.vRel if eligible else 0.0,
+                   distance=lead.dRel if eligible else 0.0, desired_distance=self.base_desired_distances[lead_index], base_tf=t_follow)
+      self.lead_gap_margins[:,lead_index] = state.margins(
+        level=carrot.leadAccelResponse, times=T_IDXS, ego_speeds=gap_v, lead_speeds=lead_xv[:,1], base_tf=t_follow,
+        lead_distances=lead_xv[:,0] - gap_x,
+        desired_distances=desired_follow_distance(gap_v, lead_xv[:,1], comfort_brake, stop_distance, t_follow))
+    # Display the current following reference, including comfort headroom and
+    # any already-authorized cutout/lane-change relief. This does not select
+    # control leads or modify solver obstacles.
+    self.desired_distance = displayed_follow_distance(
+      self.base_desired_distances, np.array([lead_0_obstacle[0], lead_1_obstacle[0]]),
+      x_obstacles[0, :2], self.lead_gap_margins[0],
+      (radarstate.leadOne.status, radarstate.leadTwo.status),
+    )
+    self.yref[:,0] = gap_reference(x_obstacles, self.lead_gap_margins, gap_v)
     self.yref[:,1] = x
     self.yref[:,2] = v
     self.yref[:,3] = a

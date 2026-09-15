@@ -12,6 +12,7 @@ from msgq.visionipc import VisionIpcClient, VisionStreamType
 from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.runtime_diagnostics import communication_snapshot
 from openpilot.common.gps import get_gps_location_service
 
 from openpilot.selfdrive.car.car_specific import CarSpecificEvents
@@ -431,17 +432,21 @@ class SelfdriveD:
         'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
       }
       if logs != self.logged_comm_issue:
-        cloudlog.event("commIssue", error=True, **logs)
+        services = list(dict.fromkeys(logs['not_freq_ok'] + logs['not_alive'] + logs['invalid'] +
+                                      ['modelV2', 'driverAssistance', 'longitudinalPlan']))
+        cloudlog.event("commIssue", error=True, **logs, timing=communication_snapshot(self.sm, services))
         self.logged_comm_issue = logs
     else:
       self.logged_comm_issue = None
 
     if not self.CP.notCar:
-      if not self.sm['livePose'].posenetOK:
+      # Defaults before the first message must not hide the actual startup failure.
+      if self.sm.seen['livePose'] and not self.sm['livePose'].posenetOK:
         self.events.add(EventName.posenetInvalid)
-      if not self.sm['livePose'].inputsOK:
+      if self.sm.seen['livePose'] and not self.sm['livePose'].inputsOK:
         self.events.add(EventName.locationdTemporaryError)
-      if not self.sm['liveParameters'].valid and cal_status == log.LiveCalibrationData.Status.calibrated and not TESTING_CLOSET and (not SIMULATION or REPLAY):
+      if (self.sm.seen['liveParameters'] and not self.sm['liveParameters'].valid and cal_status == log.LiveCalibrationData.Status.calibrated
+          and not TESTING_CLOSET and (not SIMULATION or REPLAY)):
         self.events.add(EventName.paramsdTemporaryError)
 
     # conservative HW alert. if the data or frequency are off, locationd will throw an error

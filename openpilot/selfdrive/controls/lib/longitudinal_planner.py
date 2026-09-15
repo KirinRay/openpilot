@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-import math
 import numpy as np
 
-from openpilot.cereal import log
 import openpilot.cereal.messaging as messaging
 from opendbc.car.interfaces import ACCEL_MIN, ACCEL_MAX
 from openpilot.common.constants import CV
@@ -23,6 +21,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_preview import (
   get_lead_preview_request,
   rate_limit_preview,
 )
+from openpilot.selfdrive.controls.lib.turn_accel import get_future_curvature, limit_accel_in_turns
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
@@ -36,8 +35,6 @@ CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.5
 MIN_ALLOW_THROTTLE_SPEED = 2.5
 RESET_DECEL_RAMP_TIME = 2.0
-TURN_CURVATURE_LOOKAHEAD = 1.0
-TURN_CURVATURE_MIN_SPEED = 3.0
 
 
 def get_max_accel(v_ego):
@@ -46,50 +43,6 @@ def get_max_accel(v_ego):
 def get_coast_accel(pitch):
   return np.sin(pitch) * -5.65 - 0.3  # fitted from data using xx/projects/allow_throttle/compute_coast_accel.py
 
-
-def get_future_curvature(model_msg, fallback_curvature, lookahead=TURN_CURVATURE_LOOKAHEAD):
-  if (len(model_msg.orientationRate.z) != ModelConstants.IDX_N or
-      len(model_msg.velocity.x) != ModelConstants.IDX_N):
-    return fallback_curvature
-
-  yaw_rate_future = float(np.interp(lookahead, ModelConstants.T_IDXS, model_msg.orientationRate.z))
-  velocity_future = float(np.interp(lookahead, ModelConstants.T_IDXS, model_msg.velocity.x))
-  if not (np.isfinite(yaw_rate_future) and np.isfinite(velocity_future)):
-    return fallback_curvature
-
-  return yaw_rate_future / max(abs(velocity_future), TURN_CURVATURE_MIN_SPEED)
-
-def limit_accel_in_turns(v_ego, curvature, a_target, a_lat_max,
-                         safety_ratio=0.70,   # 0.60~0.85 (작을수록 더 얌전)
-                         min_v=0.1):
-  """
-  v_ego    : m/s
-  curvature: 1/m  (sign 포함)
-  a_target : [a_min, a_max] (m/s^2)
-  a_lat_max: 허용 최대 횡가속 (m/s^2)
-
-  safety_ratio:
-    a_lat_max에 소프트 마진을 주는 비율.
-    예) a_lat_max=4, safety_ratio=0.7 -> 실사용 한계 2.8로 계산.
-
-  return   : [a_min, 제한된 a_max]
-  """
-  if v_ego < min_v or a_lat_max <= 0.0:
-    return a_target
-
-  a_lat_eff = abs(a_lat_max) * float(safety_ratio)
-
-  # 횡가속
-  a_y_abs = abs((v_ego * v_ego) * curvature)
-
-  # 남은 종가속 여유 (원형 경계)
-  if a_y_abs >= a_lat_eff:
-    a_x_allowed = 0.0
-  else:
-    a_x_allowed = math.sqrt(a_lat_eff * a_lat_eff - a_y_abs * a_y_abs)
-
-  # a_target = [min, max] 중 max만 제한
-  return [a_target[0], min(a_target[1], a_x_allowed)]
 
 class LongitudinalPlanner:
   def __init__(self, CP, init_v=0.0, init_a=0.0, dt=DT_MDL):
@@ -199,7 +152,11 @@ class LongitudinalPlanner:
       accel_limits = [A_CRUISE_MIN, carrot.get_carrot_accel(v_ego)]
       curvature_future = get_future_curvature(sm['modelV2'], sm['controlsState'].desiredCurvature)
       a_lat_max = 3.0
-      accel_limits_turns = limit_accel_in_turns(v_ego, curvature_future, accel_limits, a_lat_max)
+      accel_limits_turns = limit_accel_in_turns(
+        v_ego, curvature_future, accel_limits, a_lat_max,
+        model_msg=sm['modelV2'], v_cruise=v_cruise,
+        current_curvature=sm['controlsState'].curvature,
+      )
     else:
       accel_limits = [ACCEL_MIN, ACCEL_MAX]
       accel_limits_turns = [ACCEL_MIN, ACCEL_MAX]
@@ -258,6 +215,7 @@ class LongitudinalPlanner:
     # Response strength is a driver preference at every following-distance level.
     lead_accel_response_enabled = (
       carrot.leadAccelResponse > 0
+      and not carrot.lane_change_active
       and not reset_state
       and not sm['carState'].gasPressed
       and not force_slow_decel
@@ -270,9 +228,13 @@ class LongitudinalPlanner:
       carrot, reset_state, sm['radarState'], v_cruise, x, v, a, j,
       personality=sm['selfdriveState'].personality,
       prev_accel_constraint=prev_accel_constraint,
-      jerk_factor=carrot.jerk_factor_apply,
+      jerk_factor=carrot.jerk_factor,
       a_change_cost_starting=carrot.aChangeCostStarting,
       lead_accel_response_enabled=lead_accel_response_enabled,
+      lead_gap_enabled=(
+        not reset_state and not sm['carState'].gasPressed
+        and not force_slow_decel and not carrot.lane_change_active
+      ),
       cutout_relief_enabled=(
         not reset_state and not sm['carState'].gasPressed
         and not force_slow_decel and not self.output_should_stop
@@ -321,12 +283,16 @@ class LongitudinalPlanner:
     lead_index = 1 if self.mpc.source == 'lead1' else 0
     leads = (sm['radarState'].leadOne, sm['radarState'].leadTwo)
     lead = leads[lead_index]
+    preview_enabled = (
+      self.mpc.mode == 'acc'
+      and not reset_state
+      and not sm['carState'].gasPressed
+      and not sm['carState'].brakePressed
+    )
     preview_request = get_lead_preview_request(
       carrot.myDrivingMode,
       lead_status=(
-        self.mpc.mode == 'acc'
-        and not reset_state
-        and not sm['carState'].gasPressed
+        preview_enabled
         and lead.status
         and lead.radar
         and lead.radarTrackId >= 0
@@ -334,7 +300,10 @@ class LongitudinalPlanner:
       a_lead=lead.aLeadK,
       a_ego=sm['carState'].aEgo,
     )
-    if preview_request.active:
+    if preview_enabled:
+      # Losing radar support stops requesting preview; it must not erase an
+      # existing braking correction in one frame. Release on the current MPC
+      # trajectory, without retaining the old lead or delaying new braking.
       requested_preview = rate_limit_preview(
         preview_request.offset_s,
         self.lead_preview,
@@ -358,8 +327,7 @@ class LongitudinalPlanner:
       output_a_target_base,
       output_a_target_preview,
       carrot.myDrivingMode,
-      self.lead_preview_accel,
-    ) if preview_request.active else output_a_target_base
+    ) if preview_enabled else output_a_target_base
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
     output_v_target_now_e2e = sm['modelV2'].action.desiredVelocity

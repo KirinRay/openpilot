@@ -3,6 +3,8 @@ import numpy as np
 
 from openpilot.cereal import car
 from openpilot.common.constants import CV
+from openpilot.selfdrive.carrot.carrot_man_input import get_carrot_man
+from openpilot.selfdrive.carrot.cruise_gap import cruise_gap_levels, next_gap_personality, supported_gap_levels
 
 from opendbc.car import structs
 GearShifter = structs.CarState.GearShifter
@@ -301,6 +303,20 @@ class VCruiseCarrot:
           cruiseSpeed1 = self.nRoadLimitSpeed + self.autoRoadSpeedLimitOffset
       self._cruise_speed_table = [cruiseSpeed1, cruiseSpeed2, cruiseSpeed3, cruiseSpeed4, cruiseSpeed5]
 
+  def _update_carrot_man(self, sm):
+    carrot_man = get_carrot_man(sm)
+    if carrot_man is not None:
+      self.nRoadLimitSpeed = carrot_man.nRoadLimitSpeed
+      self.desiredSpeed = carrot_man.desiredSpeed
+      self.carrot_cmd_index = carrot_man.carrotCmdIndex
+      self.carrot_cmd = carrot_man.carrotCmd
+      self.carrot_arg = carrot_man.carrotArg
+    else:
+      self.nRoadLimitSpeed = 0
+      self.desiredSpeed = 250
+      self.carrot_cmd = ""
+      self.carrot_arg = ""
+
   def update_v_cruise(self, CS, sm, is_metric):
     self._add_log("")
     self.update_params(is_metric)
@@ -320,13 +336,7 @@ class VCruiseCarrot:
       self.autoCruiseControl_cancel_timer = max(0, self.autoCruiseControl_cancel_timer - 1)
 
     CC = sm['carControl']
-    if sm.alive['carrotMan']:
-      carrot_man = sm['carrotMan']
-      self.nRoadLimitSpeed = carrot_man.nRoadLimitSpeed
-      self.desiredSpeed = carrot_man.desiredSpeed
-      self.carrot_cmd_index = carrot_man.carrotCmdIndex
-      self.carrot_cmd = carrot_man.carrotCmd
-      self.carrot_arg = carrot_man.carrotArg
+    self._update_carrot_man(sm)
     if sm.alive['longitudinalPlan']:
       lp = sm['longitudinalPlan']
       self.xState = lp.xState
@@ -613,11 +623,14 @@ class VCruiseCarrot:
         self._cruise_speed_initialized = True
 
       elif button_type == ButtonType.gapAdjustCruise:
-        longitudinalPersonalityMax = self.params.get_int("LongitudinalPersonalityMax")
-        if CS.pcmCruiseGap == 0:
-          personality = (self.params.get_int('LongitudinalPersonality') - 1) % longitudinalPersonalityMax
+        longitudinalPersonalityMax = supported_gap_levels(self.params.get_int("LongitudinalPersonalityMax"))
+        gap_levels = cruise_gap_levels(self.params.get_int("CruiseGapLevels"), longitudinalPersonalityMax)
+        if not self.CP.openpilotLongitudinalControl:
+          gap_levels = longitudinalPersonalityMax
+        if CS.pcmCruiseGap == 0 or gap_levels < longitudinalPersonalityMax:
+          personality = next_gap_personality(self.params.get_int('LongitudinalPersonality'), gap_levels)
         else:
-          personality = np.clip(CS.pcmCruiseGap - 1, 0, longitudinalPersonalityMax)
+          personality = int(np.clip(CS.pcmCruiseGap - 1, 0, longitudinalPersonalityMax - 1))
         self.params.put_int_nonblocking('LongitudinalPersonality', personality)
         #self.events.append(EventName.personalityChanged)
       elif button_type == ButtonType.lfaButton:

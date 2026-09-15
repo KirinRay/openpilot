@@ -23,11 +23,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from aiohttp import web
 
+from openpilot.common.async_process import prepare_repo, run_locked_thread
+from openpilot.common.repo_update import RepoBusyError, child_lock_kwargs, repo_lock
 from openpilot.system.hardware import HARDWARE
 
 from ...config import PARAMS_BACKUP_PATH
 from ...services.auto_update import clear_recovered_git_ref_error
-from ...services.git_config import repair_git_config
+from ...services.git_config import prepare_git_pull, repair_git_config
 from ...services.git_state import did_git_pull_update, write_git_pull_time
 from ...services.git_status import clear_git_status_cache
 from ...services.params import HAS_PARAMS, Params, ParamKeyType, get_all_param_values_for_backup
@@ -250,7 +252,7 @@ def _build_git_update_summary_sync(repo_dir: str, before: str, after: str, raw_o
 
 async def _repair_git_job(job: dict[str, Any], repo_dir: str, **kwargs: Any) -> bool:
   jobs.progress(job, message="checking Git configuration", current=0, total=2)
-  rc, out = await asyncio.to_thread(repair_git_config, repo_dir, **kwargs)
+  rc, out = await run_locked_thread(repair_git_config, repo_dir, **kwargs)
   clear_git_status_cache()
   jobs.append(job, out + "\n")
   if rc != 0:
@@ -258,7 +260,26 @@ async def _repair_git_job(job: dict[str, Any], repo_dir: str, **kwargs: Any) -> 
   return rc == 0
 
 
+def _needs_repo_lock(action: str, body: dict) -> bool:
+  return (action.startswith("git_") and action != "git_log") or action == "rebuild_all" or (
+    action == "shell_cmd" and str(body.get("cmd") or "").strip().startswith("git ")
+  )
+
+
 async def run_tool_job(job: Dict[str, Any]) -> None:
+  if not _needs_repo_lock(normalize_action(job.get("action")), job.get("payload") or {}):
+    return await _run_tool_job(job)
+  try:
+    with repo_lock():
+      await prepare_repo("/data/openpilot")
+      return await _run_tool_job(job)
+  except (RepoBusyError, OSError, RuntimeError) as exc:
+    busy = isinstance(exc, RepoBusyError)
+    jobs.finish(job, ok=False, result={"ok": False, "error": str(exc), "error_code": "GIT_BUSY" if busy else "GIT_PRECHECK_FAILED"},
+                error=str(exc), error_code="GIT_BUSY" if busy else "GIT_PRECHECK_FAILED")
+
+
+async def _run_tool_job(job: Dict[str, Any]) -> None:
   action = normalize_action(job.get("action"))
   body = job.get("payload") or {}
   repo_dir = "/data/openpilot"
@@ -271,7 +292,10 @@ async def run_tool_job(job: Dict[str, Any]) -> None:
       return
 
     if action == "git_pull":
-      if not await _repair_git_job(job, repo_dir):
+      rc_config, out_config, target_head = await run_locked_thread(prepare_git_pull, repo_dir)
+      jobs.append(job, out_config + "\n")
+      if rc_config:
+        jobs.finish(job, ok=False, result=jobs.result_from_log(job, rc_config))
         return
       jobs.progress(job, message="git reset --hard", current=1, total=2)
       jobs.append(job, "$ git reset --hard\n")
@@ -284,7 +308,7 @@ async def run_tool_job(job: Dict[str, Any]) -> None:
       before_head = before_out.strip() if rc_before == 0 else ""
       jobs.append(job, "\n$ git pull\n")
       jobs.progress(job, message="git pull", current=2, total=2)
-      rc = await jobs.stream_exec(job, ["git", "pull"], cwd=repo_dir, timeout=180)
+      rc = await jobs.stream_exec(job, ["git", "merge", "--ff-only", target_head], cwd=repo_dir, timeout=180)
       rc_after, after_out = await jobs.capture_exec(["git", "rev-parse", "HEAD"], cwd=repo_dir, timeout=10)
       after_head = after_out.strip() if rc_after == 0 else ""
       clear_git_status_cache()
@@ -629,13 +653,12 @@ async def run_tool_job(job: Dict[str, Any]) -> None:
         jobs.finish(job, ok=False, result={"ok": False, "error": "missing branch"}, error="missing branch")
         return
 
-      # Robust factory reset: first clear a stuck index lock and abort any
+      # The guarded preflight handles abandoned index.lock. Abort any
       # half-finished operation (merge/rebase/cherry-pick/am) so the checkout
       # isn't blocked, then FORCE the branch to the remote (-f discards local
       # changes that would otherwise abort the checkout). The abort/cleanup
       # steps are allowed to fail (they no-op when not applicable).
       steps = [
-        ("clear stale git locks", ["find", ".git", "-type", "f", "-name", "*.lock", "-delete"], True),
         ("git merge --abort", ["git", "merge", "--abort"], True),
         ("git rebase --abort", ["git", "rebase", "--abort"], True),
         ("git cherry-pick --abort", ["git", "cherry-pick", "--abort"], True),
@@ -843,6 +866,17 @@ async def run_tool_job(job: Dict[str, Any]) -> None:
 
 
 async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Response:
+  if not _needs_repo_lock(normalize_action(body.get("action")), body):
+    return await _dispatch_sync(request, body)
+  try:
+    with repo_lock():
+      await prepare_repo("/data/openpilot")
+      return await _dispatch_sync(request, body)
+  except (RepoBusyError, OSError, RuntimeError) as exc:
+    return web.json_response({"ok": False, "error": str(exc), "error_code": "GIT_BUSY" if isinstance(exc, RepoBusyError) else "GIT_PRECHECK_FAILED"}, status=409)
+
+
+async def _dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Response:
   action = normalize_action(body.get("action"))
   action_error = validate_action(action)
   if action_error:
@@ -850,7 +884,7 @@ async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Respo
     return web.json_response({"ok": False, "error": error, "error_code": error_code}, status=400)
 
   def run(cmd: List[str], cwd: Optional[str] = None) -> Tuple[int, str]:
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, **child_lock_kwargs())
     out = (p.stdout or "") + (("\n" + p.stderr) if p.stderr else "")
     return p.returncode, out.strip()
 
@@ -858,13 +892,13 @@ async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Respo
     REPO_DIR = "/data/openpilot"
 
     if action == "git_pull":
-      rc_config, out_config = await asyncio.to_thread(repair_git_config, REPO_DIR)
+      rc_config, out_config, target_head = await run_locked_thread(prepare_git_pull, REPO_DIR)
       clear_git_status_cache()
       if rc_config != 0:
         return web.json_response({"ok": False, "rc": rc_config, "out": out_config})
       rc_before, before_out = run(["git", "rev-parse", "HEAD"], cwd=REPO_DIR)
       before_head = before_out.strip() if rc_before == 0 else ""
-      rc, out = run(["git", "pull"], cwd=REPO_DIR)
+      rc, out = run(["git", "merge", "--ff-only", target_head], cwd=REPO_DIR)
       out = (out_config + "\n" + out).strip()
       rc_after, after_out = run(["git", "rev-parse", "HEAD"], cwd=REPO_DIR)
       after_head = after_out.strip() if rc_after == 0 else ""
@@ -893,7 +927,7 @@ async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Respo
       target = (body.get("target") or "HEAD").strip()
       if mode not in ("hard", "soft", "mixed"):
         return web.json_response({"ok": False, "error": "bad mode"}, status=400)
-      rc_config, out_config = await asyncio.to_thread(repair_git_config, REPO_DIR)
+      rc_config, out_config = await run_locked_thread(repair_git_config, REPO_DIR)
       clear_git_status_cache()
       if rc_config != 0:
         return web.json_response({"ok": False, "rc": rc_config, "out": out_config})
@@ -1015,7 +1049,7 @@ async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Respo
       rc, out = run(["git", "remote", "set-url", "origin", url], cwd=REPO_DIR)
       if rc != 0:
         return web.json_response({"ok": False, "rc": rc, "out": out})
-      rc, out = await asyncio.to_thread(repair_git_config, REPO_DIR, remote="origin", repair_upstream=False)
+      rc, out = await run_locked_thread(repair_git_config, REPO_DIR, remote="origin", repair_upstream=False)
       clear_git_status_cache()
       return web.json_response({"ok": rc == 0, "rc": rc, "out": out, "summary_key": "git_result_remote_set_done"})
 
@@ -1033,7 +1067,7 @@ async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Respo
       if rc_setup != 0:
         return web.json_response({"ok": False, "rc": rc_setup, "out": out_setup})
 
-      rc_fetch, out_fetch = await asyncio.to_thread(repair_git_config, REPO_DIR, remote=name, repair_upstream=False)
+      rc_fetch, out_fetch = await run_locked_thread(repair_git_config, REPO_DIR, remote=name, repair_upstream=False)
       clear_git_status_cache()
       rc_remote_urls, out_remote_urls = run(["git", "remote", "-v"], cwd=REPO_DIR)
       out = (out_setup + "\n" + out_fetch + "\n\n> git remote -v\n" + (out_remote_urls if rc_remote_urls == 0 else "")).strip()
@@ -1109,7 +1143,6 @@ async def dispatch_sync(request: web.Request, body: Dict[str, Any]) -> web.Respo
       # Robust factory reset (see job path above): clear stuck lock + abort any
       # in-progress op, then force the branch to the remote. (cmd, allow_fail)
       commands = [
-        (["find", ".git", "-type", "f", "-name", "*.lock", "-delete"], True),
         (["git", "merge", "--abort"], True),
         (["git", "rebase", "--abort"], True),
         (["git", "cherry-pick", "--abort"], True),
