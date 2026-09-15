@@ -234,6 +234,22 @@ else:
 np_version = SCons.Script.Value(np.__version__)
 Export('envCython', 'np_version')
 
+# ffmpeg: comma dependency pkg. Shared venvs ship .so (no x264 needed);
+# older static venvs need x264/z/va/drm link deps (ported from upstream).
+import os as _os
+_ffmpeg_pkg = next((p for p in pkgs if p.__name__ == 'ffmpeg'), None)
+_ffmpeg_lib_names = _os.listdir(_ffmpeg_pkg.LIB_DIR) if (_ffmpeg_pkg is not None and _os.path.isdir(_ffmpeg_pkg.LIB_DIR)) else []
+_ffmpeg_shared = any(
+  n.startswith('libavcodec.so') or (n.startswith('libavcodec') and n.endswith('.dylib'))
+  for n in _ffmpeg_lib_names
+)
+ffmpeg_libs = ['avformat', 'avcodec', 'swresample', 'avutil']
+if not _ffmpeg_shared:
+  ffmpeg_libs += ['x264', 'z']
+  if arch != "Darwin":
+    ffmpeg_libs += ['va', 'va-drm', 'drm']
+
+
 Export('env', 'arch', 'ffmpeg_libs')
 
 # Setup cache dir

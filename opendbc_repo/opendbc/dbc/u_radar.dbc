@@ -1,0 +1,3893 @@
+
+
+VERSION ""
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: RADAR
+
+BO_ 513 RadarState: 8 XXX
+ SG_ NVMReadStatus : 6|1@0+ (1,0) [0|1] "" XXX
+ SG_ NVMWriteStatus : 7|1@0+ (1,0) [0|1] "" XXX
+ SG_ MaxDistanceCfg : 22|10@0+ (2,0) [0|2046] "m" XXX
+ SG_ RadarPowerCfg : 39|3@0+ (1,0) [0|7] "" XXX
+ SG_ SensorID : 32|3@0+ (1,0) [0|7] "" XXX
+ SG_ SortIndex : 36|3@0+ (1,0) [0|7] "" XXX
+ SG_ CtrlRelayCfg : 41|1@0+ (1,0) [0|1] "" XXX
+ SG_ OutputTypeCfg : 43|2@0+ (1,0) [0|3] "" XXX
+ SG_ QualityInfoCfg : 44|1@0+ (1,0) [0|1] "" XXX
+ SG_ ExtInfoCfg : 45|1@0+ (1,0) [0|1] "" XXX
+ SG_ CANBaudRate : 55|3@0+ (1,0) [0|7] "" XXX
+ SG_ InterfaceType : 57|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCSThreshold : 60|3@1+ (1,0) [0|7] "" XXX
+ SG_ CalibrationEnabled : 63|2@0+ (1,0) [0|3] "" XXX
+
+VAL_ 513 NVMReadStatus 0 "Failed" 1 "Successful";
+VAL_ 513 NVMWriteStatus 0 "Failed" 1 "Successful";
+VAL_ 513 RadarPowerCfg 0 "Standard" 1 "-3dB Gain" 2 "-6dB Gain" 3 "-9dB Gain";
+VAL_ 513 SortIndex 0 "No Sorting" 1 "Sort By Range" 2 "Sort By RCS";
+VAL_ 513 CtrlRelayCfg 0 "Off" 1 "On";
+VAL_ 513 OutputTypeCfg 0 "None" 1 "Objects" 2 "Clusters";
+VAL_ 513 QualityInfoCfg 0 "Off" 1 "On";
+VAL_ 513 ExtInfoCfg 0 "Off" 1 "On";
+VAL_ 513 CANBaudRate 0 "500K" 1 "250K" 2 "1M";
+VAL_ 513 RCSThreshold 0 "Standard" 1 "High Sensitivity";
+VAL_ 513 CalibrationEnabled 1 "Enabled" 2 "Initial Recovery";
+
+BO_ 1546 Status: 8 RADAR
+ SG_ NoOfObjects : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ MeasCount : 15|16@0+ (1,0) [0|65535] "" XXX
+ SG_ InterfaceVersion : 31|4@0+ (1,0) [0|15] "" XXX
+
+BO_ 1547 ObjectData: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 1547 "Object detection and tracking information";
+VAL_ 1547 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 1547 Class 0 "point" 1 "vehicle";
+
+BO_ 383 ObjectData_0: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 383 "Object detection and tracking information";
+VAL_ 383 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 383 Class 0 "point" 1 "vehicle";
+
+BO_ 384 ObjectData_1: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 384 "Object detection and tracking information";
+VAL_ 384 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 384 Class 0 "point" 1 "vehicle";
+
+BO_ 385 ObjectData_2: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 385 "Object detection and tracking information";
+VAL_ 385 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 385 Class 0 "point" 1 "vehicle";
+
+BO_ 386 ObjectData_3: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 386 "Object detection and tracking information";
+VAL_ 386 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 386 Class 0 "point" 1 "vehicle";
+
+BO_ 387 ObjectData_4: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 387 "Object detection and tracking information";
+VAL_ 387 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 387 Class 0 "point" 1 "vehicle";
+
+BO_ 388 ObjectData_5: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 388 "Object detection and tracking information";
+VAL_ 388 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 388 Class 0 "point" 1 "vehicle";
+
+BO_ 389 ObjectData_6: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 389 "Object detection and tracking information";
+VAL_ 389 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 389 Class 0 "point" 1 "vehicle";
+
+BO_ 390 ObjectData_7: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 390 "Object detection and tracking information";
+VAL_ 390 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 390 Class 0 "point" 1 "vehicle";
+
+BO_ 391 ObjectData_8: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 391 "Object detection and tracking information";
+VAL_ 391 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 391 Class 0 "point" 1 "vehicle";
+
+BO_ 392 ObjectData_9: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 392 "Object detection and tracking information";
+VAL_ 392 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 392 Class 0 "point" 1 "vehicle";
+
+BO_ 393 ObjectData_10: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 393 "Object detection and tracking information";
+VAL_ 393 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 393 Class 0 "point" 1 "vehicle";
+
+BO_ 394 ObjectData_11: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 394 "Object detection and tracking information";
+VAL_ 394 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 394 Class 0 "point" 1 "vehicle";
+
+BO_ 395 ObjectData_12: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 395 "Object detection and tracking information";
+VAL_ 395 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 395 Class 0 "point" 1 "vehicle";
+
+BO_ 396 ObjectData_13: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 396 "Object detection and tracking information";
+VAL_ 396 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 396 Class 0 "point" 1 "vehicle";
+
+BO_ 397 ObjectData_14: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 397 "Object detection and tracking information";
+VAL_ 397 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 397 Class 0 "point" 1 "vehicle";
+
+BO_ 398 ObjectData_15: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 398 "Object detection and tracking information";
+VAL_ 398 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 398 Class 0 "point" 1 "vehicle";
+
+BO_ 399 ObjectData_16: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 399 "Object detection and tracking information";
+VAL_ 399 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 399 Class 0 "point" 1 "vehicle";
+
+BO_ 400 ObjectData_17: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 400 "Object detection and tracking information";
+VAL_ 400 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 400 Class 0 "point" 1 "vehicle";
+
+BO_ 401 ObjectData_18: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 401 "Object detection and tracking information";
+VAL_ 401 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 401 Class 0 "point" 1 "vehicle";
+
+BO_ 402 ObjectData_19: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 402 "Object detection and tracking information";
+VAL_ 402 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 402 Class 0 "point" 1 "vehicle";
+
+BO_ 403 ObjectData_20: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 403 "Object detection and tracking information";
+VAL_ 403 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 403 Class 0 "point" 1 "vehicle";
+
+BO_ 404 ObjectData_21: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 404 "Object detection and tracking information";
+VAL_ 404 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 404 Class 0 "point" 1 "vehicle";
+
+BO_ 405 ObjectData_22: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 405 "Object detection and tracking information";
+VAL_ 405 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 405 Class 0 "point" 1 "vehicle";
+
+BO_ 406 ObjectData_23: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 406 "Object detection and tracking information";
+VAL_ 406 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 406 Class 0 "point" 1 "vehicle";
+
+BO_ 407 ObjectData_24: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 407 "Object detection and tracking information";
+VAL_ 407 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 407 Class 0 "point" 1 "vehicle";
+
+BO_ 408 ObjectData_25: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 408 "Object detection and tracking information";
+VAL_ 408 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 408 Class 0 "point" 1 "vehicle";
+
+BO_ 409 ObjectData_26: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 409 "Object detection and tracking information";
+VAL_ 409 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 409 Class 0 "point" 1 "vehicle";
+
+BO_ 410 ObjectData_27: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 410 "Object detection and tracking information";
+VAL_ 410 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 410 Class 0 "point" 1 "vehicle";
+
+BO_ 411 ObjectData_28: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 411 "Object detection and tracking information";
+VAL_ 411 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 411 Class 0 "point" 1 "vehicle";
+
+BO_ 412 ObjectData_29: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 412 "Object detection and tracking information";
+VAL_ 412 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 412 Class 0 "point" 1 "vehicle";
+
+BO_ 413 ObjectData_30: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 413 "Object detection and tracking information";
+VAL_ 413 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 413 Class 0 "point" 1 "vehicle";
+
+BO_ 414 ObjectData_31: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 414 "Object detection and tracking information";
+VAL_ 414 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 414 Class 0 "point" 1 "vehicle";
+
+BO_ 415 ObjectData_32: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 415 "Object detection and tracking information";
+VAL_ 415 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 415 Class 0 "point" 1 "vehicle";
+
+BO_ 416 ObjectData_33: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 416 "Object detection and tracking information";
+VAL_ 416 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 416 Class 0 "point" 1 "vehicle";
+
+BO_ 417 ObjectData_34: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 417 "Object detection and tracking information";
+VAL_ 417 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 417 Class 0 "point" 1 "vehicle";
+
+BO_ 418 ObjectData_35: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 418 "Object detection and tracking information";
+VAL_ 418 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 418 Class 0 "point" 1 "vehicle";
+
+BO_ 419 ObjectData_36: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 419 "Object detection and tracking information";
+VAL_ 419 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 419 Class 0 "point" 1 "vehicle";
+
+BO_ 420 ObjectData_37: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 420 "Object detection and tracking information";
+VAL_ 420 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 420 Class 0 "point" 1 "vehicle";
+
+BO_ 421 ObjectData_38: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 421 "Object detection and tracking information";
+VAL_ 421 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 421 Class 0 "point" 1 "vehicle";
+
+BO_ 422 ObjectData_39: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 422 "Object detection and tracking information";
+VAL_ 422 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 422 Class 0 "point" 1 "vehicle";
+
+BO_ 423 ObjectData_40: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 423 "Object detection and tracking information";
+VAL_ 423 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 423 Class 0 "point" 1 "vehicle";
+
+BO_ 424 ObjectData_41: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 424 "Object detection and tracking information";
+VAL_ 424 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 424 Class 0 "point" 1 "vehicle";
+
+BO_ 425 ObjectData_42: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 425 "Object detection and tracking information";
+VAL_ 425 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 425 Class 0 "point" 1 "vehicle";
+
+BO_ 426 ObjectData_43: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 426 "Object detection and tracking information";
+VAL_ 426 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 426 Class 0 "point" 1 "vehicle";
+
+BO_ 427 ObjectData_44: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 427 "Object detection and tracking information";
+VAL_ 427 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 427 Class 0 "point" 1 "vehicle";
+
+BO_ 428 ObjectData_45: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 428 "Object detection and tracking information";
+VAL_ 428 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 428 Class 0 "point" 1 "vehicle";
+
+BO_ 429 ObjectData_46: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 429 "Object detection and tracking information";
+VAL_ 429 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 429 Class 0 "point" 1 "vehicle";
+
+BO_ 430 ObjectData_47: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 430 "Object detection and tracking information";
+VAL_ 430 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 430 Class 0 "point" 1 "vehicle";
+
+BO_ 431 ObjectData_48: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 431 "Object detection and tracking information";
+VAL_ 431 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 431 Class 0 "point" 1 "vehicle";
+
+BO_ 432 ObjectData_49: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 432 "Object detection and tracking information";
+VAL_ 432 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 432 Class 0 "point" 1 "vehicle";
+
+BO_ 433 ObjectData_50: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 433 "Object detection and tracking information";
+VAL_ 433 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 433 Class 0 "point" 1 "vehicle";
+
+BO_ 434 ObjectData_51: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 434 "Object detection and tracking information";
+VAL_ 434 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 434 Class 0 "point" 1 "vehicle";
+
+BO_ 435 ObjectData_52: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 435 "Object detection and tracking information";
+VAL_ 435 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 435 Class 0 "point" 1 "vehicle";
+
+BO_ 436 ObjectData_53: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 436 "Object detection and tracking information";
+VAL_ 436 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 436 Class 0 "point" 1 "vehicle";
+
+BO_ 437 ObjectData_54: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 437 "Object detection and tracking information";
+VAL_ 437 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 437 Class 0 "point" 1 "vehicle";
+
+BO_ 438 ObjectData_55: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 438 "Object detection and tracking information";
+VAL_ 438 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 438 Class 0 "point" 1 "vehicle";
+
+BO_ 439 ObjectData_56: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 439 "Object detection and tracking information";
+VAL_ 439 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 439 Class 0 "point" 1 "vehicle";
+
+BO_ 440 ObjectData_57: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 440 "Object detection and tracking information";
+VAL_ 440 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 440 Class 0 "point" 1 "vehicle";
+
+BO_ 441 ObjectData_58: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 441 "Object detection and tracking information";
+VAL_ 441 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 441 Class 0 "point" 1 "vehicle";
+
+BO_ 442 ObjectData_59: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 442 "Object detection and tracking information";
+VAL_ 442 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 442 Class 0 "point" 1 "vehicle";
+
+BO_ 443 ObjectData_60: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 443 "Object detection and tracking information";
+VAL_ 443 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 443 Class 0 "point" 1 "vehicle";
+
+BO_ 444 ObjectData_61: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 444 "Object detection and tracking information";
+VAL_ 444 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 444 Class 0 "point" 1 "vehicle";
+
+BO_ 445 ObjectData_62: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 445 "Object detection and tracking information";
+VAL_ 445 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 445 Class 0 "point" 1 "vehicle";
+
+BO_ 446 ObjectData_63: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 446 "Object detection and tracking information";
+VAL_ 446 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 446 Class 0 "point" 1 "vehicle";
+
+BO_ 447 ObjectData_64: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 447 "Object detection and tracking information";
+VAL_ 447 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 447 Class 0 "point" 1 "vehicle";
+
+BO_ 448 ObjectData_65: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 448 "Object detection and tracking information";
+VAL_ 448 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 448 Class 0 "point" 1 "vehicle";
+
+BO_ 449 ObjectData_66: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 449 "Object detection and tracking information";
+VAL_ 449 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 449 Class 0 "point" 1 "vehicle";
+
+BO_ 450 ObjectData_67: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 450 "Object detection and tracking information";
+VAL_ 450 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 450 Class 0 "point" 1 "vehicle";
+
+BO_ 451 ObjectData_68: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 451 "Object detection and tracking information";
+VAL_ 451 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 451 Class 0 "point" 1 "vehicle";
+
+BO_ 452 ObjectData_69: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 452 "Object detection and tracking information";
+VAL_ 452 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 452 Class 0 "point" 1 "vehicle";
+
+BO_ 453 ObjectData_70: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 453 "Object detection and tracking information";
+VAL_ 453 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 453 Class 0 "point" 1 "vehicle";
+
+BO_ 454 ObjectData_71: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 454 "Object detection and tracking information";
+VAL_ 454 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 454 Class 0 "point" 1 "vehicle";
+
+BO_ 455 ObjectData_72: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 455 "Object detection and tracking information";
+VAL_ 455 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 455 Class 0 "point" 1 "vehicle";
+
+BO_ 456 ObjectData_73: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 456 "Object detection and tracking information";
+VAL_ 456 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 456 Class 0 "point" 1 "vehicle";
+
+BO_ 457 ObjectData_74: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 457 "Object detection and tracking information";
+VAL_ 457 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 457 Class 0 "point" 1 "vehicle";
+
+BO_ 458 ObjectData_75: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 458 "Object detection and tracking information";
+VAL_ 458 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 458 Class 0 "point" 1 "vehicle";
+
+BO_ 459 ObjectData_76: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 459 "Object detection and tracking information";
+VAL_ 459 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 459 Class 0 "point" 1 "vehicle";
+
+BO_ 460 ObjectData_77: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 460 "Object detection and tracking information";
+VAL_ 460 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 460 Class 0 "point" 1 "vehicle";
+
+BO_ 461 ObjectData_78: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 461 "Object detection and tracking information";
+VAL_ 461 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 461 Class 0 "point" 1 "vehicle";
+
+BO_ 462 ObjectData_79: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 462 "Object detection and tracking information";
+VAL_ 462 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 462 Class 0 "point" 1 "vehicle";
+
+BO_ 463 ObjectData_80: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 463 "Object detection and tracking information";
+VAL_ 463 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 463 Class 0 "point" 1 "vehicle";
+
+BO_ 464 ObjectData_81: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 464 "Object detection and tracking information";
+VAL_ 464 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 464 Class 0 "point" 1 "vehicle";
+
+BO_ 465 ObjectData_82: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 465 "Object detection and tracking information";
+VAL_ 465 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 465 Class 0 "point" 1 "vehicle";
+
+BO_ 466 ObjectData_83: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 466 "Object detection and tracking information";
+VAL_ 466 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 466 Class 0 "point" 1 "vehicle";
+
+BO_ 467 ObjectData_84: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 467 "Object detection and tracking information";
+VAL_ 467 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 467 Class 0 "point" 1 "vehicle";
+
+BO_ 468 ObjectData_85: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 468 "Object detection and tracking information";
+VAL_ 468 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 468 Class 0 "point" 1 "vehicle";
+
+BO_ 469 ObjectData_86: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 469 "Object detection and tracking information";
+VAL_ 469 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 469 Class 0 "point" 1 "vehicle";
+
+BO_ 470 ObjectData_87: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 470 "Object detection and tracking information";
+VAL_ 470 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 470 Class 0 "point" 1 "vehicle";
+
+BO_ 471 ObjectData_88: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 471 "Object detection and tracking information";
+VAL_ 471 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 471 Class 0 "point" 1 "vehicle";
+
+BO_ 472 ObjectData_89: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 472 "Object detection and tracking information";
+VAL_ 472 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 472 Class 0 "point" 1 "vehicle";
+
+BO_ 473 ObjectData_90: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 473 "Object detection and tracking information";
+VAL_ 473 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 473 Class 0 "point" 1 "vehicle";
+
+BO_ 474 ObjectData_91: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 474 "Object detection and tracking information";
+VAL_ 474 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 474 Class 0 "point" 1 "vehicle";
+
+BO_ 475 ObjectData_92: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 475 "Object detection and tracking information";
+VAL_ 475 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 475 Class 0 "point" 1 "vehicle";
+
+BO_ 476 ObjectData_93: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 476 "Object detection and tracking information";
+VAL_ 476 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 476 Class 0 "point" 1 "vehicle";
+
+BO_ 477 ObjectData_94: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 477 "Object detection and tracking information";
+VAL_ 477 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 477 Class 0 "point" 1 "vehicle";
+
+BO_ 478 ObjectData_95: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 478 "Object detection and tracking information";
+VAL_ 478 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 478 Class 0 "point" 1 "vehicle";
+
+BO_ 479 ObjectData_96: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 479 "Object detection and tracking information";
+VAL_ 479 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 479 Class 0 "point" 1 "vehicle";
+
+BO_ 480 ObjectData_97: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 480 "Object detection and tracking information";
+VAL_ 480 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 480 Class 0 "point" 1 "vehicle";
+
+BO_ 481 ObjectData_98: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 481 "Object detection and tracking information";
+VAL_ 481 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 481 Class 0 "point" 1 "vehicle";
+
+BO_ 482 ObjectData_99: 8 RADAR
+ SG_ ID : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ DistLong : 15|13@0+ (0.2,-500) [-500|1138.2] "m" XXX
+ SG_ DistLat : 18|11@0+ (0.2,-204.6) [-204.6|204.8] "m" XXX
+ SG_ VRelLong : 39|10@0+ (0.25,-128) [-128|127.75] "m/s" XXX
+ SG_ VRelLat : 45|9@0+ (0.25,-64) [-64|63.75] "m/s" XXX
+ SG_ DynProp : 50|3@0+ (1,0) [0|7] "" XXX
+ SG_ Class : 52|2@0+ (1,0) [0|3] "" XXX
+ SG_ RCS : 63|8@0+ (0.5,-64) [-64|63.75] "dBm2" XXX
+
+CM_ BO_ 482 "Object detection and tracking information";
+VAL_ 482 DynProp 0 "moving" 1 "stationary" 2 "oncoming" 3 "crossing_left" 4 "crossing_right" 5 "unknown" 6 "stopped";
+VAL_ 482 Class 0 "point" 1 "vehicle";
+
+
+CM_ BO_ 482 "===== 以下为 BYD 唐DM 车内 ARS4xx 雷达 (v3) 补充 =====";
+BO_ 134117888 RADAR_7FE7A00: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ lane_zone : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 134117888 B7 "字节7";
+
+BO_ 261 RADAR_105: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 261 B7 "字节7";
+
+BO_ 264 RADAR_108: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 264 B7 "字节7";
+
+BO_ 258 RADAR_102: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 258 B7 "字节7";
+
+BO_ 259 RADAR_103: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 259 B7 "字节7";
+
+BO_ 262 RADAR_106: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 262 B7 "字节7";
+
+BO_ 263 RADAR_107: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 263 B7 "字节7";
+
+BO_ 848 RADAR_350: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 848 B7 "字节7";
+
+BO_ 260 RADAR_104: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 260 B7 "字节7";
+
+BO_ 257 RADAR_101: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 257 B7 "字节7";
+
+BO_ 469662234 RADAR_1BFE7A1A: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662234 B7 "字节7";
+
+BO_ 469662235 RADAR_1BFE7A1B: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ vEgo_quant : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 469662235 B7 "字节7";
+
+BO_ 769 RADAR_301: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 769 B7 "字节7";
+
+BO_ 916 RADAR_394: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 916 B7 "字节7";
+ SG_ dRel_slot5 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 916 dRel_slot5 "池A槽5距离 0.4244*b3+17.79";
+
+BO_ 985 RADAR_3D9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 985 B7 "字节7";
+
+BO_ 982 RADAR_3D6: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 982 B7 "字节7";
+
+BO_ 983 RADAR_3D7: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 983 B7 "字节7";
+
+BO_ 973 RADAR_3CD: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 973 B7 "字节7";
+
+ SG_ dRel_B3CD : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 973 dRel_B3CD "扩展池0x3cd距离";
+BO_ 984 RADAR_3D8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 984 B7 "字节7";
+
+BO_ 839 RADAR_347: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 839 B7 "字节7";
+ SG_ azim_deg_347 : 32|8@1+ (0.5,-64) [0|255] "deg" RADAR
+CM_ SG_ 839 azim_deg_347 "方位角 (b4-128)*0.5° 128=正前方 (全量验证corr0.975)";
+
+BO_ 980 RADAR_3D4: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 980 B7 "字节7";
+
+BO_ 981 RADAR_3D5: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 981 B7 "字节7";
+
+BO_ 974 RADAR_3CE: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 974 B7 "字节7";
+
+ SG_ dRel_B3CE : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 974 dRel_B3CE "扩展池0x3ce距离";
+BO_ 842 RADAR_34A: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 842 B7 "字节7";
+ SG_ azim_deg_34A : 32|8@1+ (0.5,-64) [0|255] "deg" RADAR
+CM_ SG_ 842 azim_deg_34A "方位角 (b4-128)*0.5° 128=正前方 (全量验证corr0.975)";
+
+BO_ 896 RADAR_380: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ type_TA0 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 896 B7 "字节7";
+ SG_ dRel_slot0 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 896 dRel_slot0 "VERIFIED(cabana,28段): 有效段21/28(75%), 有效率中位36.9%. 值域18.2-123.5m. 主槽距离, 与MainDist交叉校验.";
+CM_ SG_ 896 dRel_slot0 "池A槽0距离 0.4244*b3+17.79";
+
+BO_ 972 RADAR_3CC: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 972 B7 "字节7";
+ SG_ dRel_B3CC : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 972 dRel_B3CC "扩展池0x3cc距离";
+
+BO_ 975 RADAR_3CF: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 975 B7 "字节7";
+
+BO_ 912 RADAR_390: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 912 B7 "字节7";
+ SG_ dRel_slot4 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 912 dRel_slot4 "池A槽4距离 0.4244*b3+17.79";
+
+BO_ 833 RADAR_341: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B3 "字节3";
+CM_ SG_ 833 TargetCount "NOT VERIFIED(cabana,2段): 不可靠, 目标数变化时值不单调/部分段恒247. DO NOT USE for conditional decoding.";
+CM_ SG_ 833 TargetCount "目标总数 (0x341 b3) 实证: 1->72 2->87 3->103 4->160 5->207 6->247 (全170段目标数梯度验证)";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 833 B7 "字节7";
+ SG_ azim_deg_341 : 32|8@1+ (0.5,-64) [0|255] "deg" RADAR
+CM_ SG_ 833 azim_deg_341 "方位角 (b4-128)*0.5° 128=正前方 (全量验证corr0.975)";
+
+BO_ 836 RADAR_344: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 836 B7 "字节7";
+ SG_ azim_deg_344 : 32|8@1+ (0.5,-64) [0|255] "deg" RADAR
+CM_ SG_ 836 azim_deg_344 "方位角 (b4-128)*0.5° 128=正前方 (全量验证corr0.975)";
+
+BO_ 968 RADAR_3C8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 968 B7 "字节7";
+ SG_ dRel_B3C8 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 968 dRel_B3C8 "扩展池0x3c8距离";
+
+BO_ 900 RADAR_384: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ type_TA1 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 900 B7 "字节7";
+ SG_ dRel_slot1 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 900 dRel_slot1 "池A槽1距离 0.4244*b3+17.79";
+
+BO_ 977 RADAR_3D1: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 977 B7 "字节7";
+
+BO_ 978 RADAR_3D2: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 978 B7 "字节7";
+
+BO_ 979 RADAR_3D3: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 979 B7 "字节7";
+
+BO_ 971 RADAR_3CB: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 971 B7 "字节7";
+ SG_ dRel_B3CB : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 971 dRel_B3CB "扩展池0x3cb距离";
+
+BO_ 976 RADAR_3D0: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 976 B7 "字节7";
+
+BO_ 969 RADAR_3C9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 969 B7 "字节7";
+ SG_ dRel_B3C9 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 969 dRel_B3C9 "扩展池0x3c9距离";
+
+BO_ 904 RADAR_388: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ type_TA2 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 904 B7 "字节7";
+ SG_ dRel_slot2 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 904 dRel_slot2 "池A槽2距离 0.4244*b3+17.79";
+
+BO_ 970 RADAR_3CA: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 970 B7 "字节7";
+ SG_ dRel_B3CA : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 970 dRel_B3CA "扩展池0x3ca距离";
+
+BO_ 908 RADAR_38C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ type_TA3 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 908 B7 "字节7";
+ SG_ dRel_slot3 : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 908 dRel_slot3 "池A槽3距离 0.4244*b3+17.79";
+
+BO_ 770 RADAR_302: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 770 B7 "字节7";
+
+BO_ 256 RADAR_100: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 256 B7 "字节7";
+
+BO_ 1385 RADAR_569: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B0 "字节0";
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B1 "字节1";
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B2 "字节2";
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B3 "字节3";
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B4 "字节4";
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B5 "字节5";
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B6 "字节6";
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+CM_ SG_ 1385 B7 "字节7";
+
+BO_ 265 RADAR_MAIN_TARGET: 8 RADAR
+CM_ BO_ 265 "主目标 (0x109): MainDist=0.5*b7-4, 全量983段100%验证";
+ SG_ MainDist : 56|8@1+ (0.5,-4) [0|255] "m" RADAR
+CM_ SG_ 265 MainDist "主目标距离 0.5*b7-4 (1,104,596帧100%)";
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+CM_ BO_ 0 "从零验证DBC: 仅保留盲扫+自我一致性验证字段(距离0.4244*b3+17.79, 方位角(b4-128)*0.5°, 原始字节). 删除所有猜测/_tang死值/未验证";
+
+BO_ 897 RADAR_381: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ RollSub0 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ CycleSub0 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ LevelSub0 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot0b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+ SG_ AzimSub0 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+CM_ SG_ 897 AzimSub0 "SUB fangwei 128-zhongxin b6-128 SUB偏-3.6=biandao (2026-08-24)";
+CM_ SG_ 897 CycleSub0 "b2 通用周期标志位 0/128: 6-7帧90%周期翻转, 所有方位翻转率~50%, 与距离/方位无关, 非隔离栏/对向车/切换专属 = ARS4xx刷新节拍 (2026-08-24深挖)";
+CM_ SG_ 897 LevelSub0 "b7 距离等级 0-5: 0=远199/1=近27/2=中58/3=中远109/4-5=远, 随距离走 (2026-08-24深挖)";
+CM_ SG_ 897 RollSub0 "b1 滚动码低4位, 与主目标同源帧校验 (2026-08-24)";
+CM_ SG_ 897 dRel_slot0b "VERIFIED(cabana,28段): 有效段21/28(75%), 有效率中位60.4%. 值域18.2-125.6m.";
+CM_ SG_ 897 dRel_slot0b "池A槽0副距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 898 RADAR_382: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot0c : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 898 dRel_slot0c "PARTIAL(cabana,28段): 有效段18/28(64%), 有效率中位仅6.2%. 多数空闲, 参考用.";
+CM_ SG_ 898 dRel_slot0c "池A槽0副2距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 899 RADAR_383: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot0d : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 899 dRel_slot0d "实测(45段): 哨兵=4(占81-87%%帧), 真目标帧<1%%, 非100%%匹配. 原'100%%有效'是哨兵4(19.5m)冒充. 参考用, 不标VERIFIED.";
+CM_ SG_ 899 dRel_slot0d "池A槽0副3距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 901 RADAR_385: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ RollSub1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ CycleSub1 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ LevelSub1 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot1b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+ SG_ AzimSub1 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+CM_ SG_ 901 AzimSub1 "SUB fangwei 128-zhongxin b6-128 SUB偏-3.6=biandao (2026-08-24)";
+CM_ SG_ 901 CycleSub1 "b2 通用周期标志位 0/128: 6-7帧90%周期翻转, 所有方位翻转率~50%, 与距离/方位无关, 非隔离栏/对向车/切换专属 = ARS4xx刷新节拍 (2026-08-24深挖)";
+CM_ SG_ 901 LevelSub1 "b7 距离等级 0-5: 0=远199/1=近27/2=中58/3=中远109/4-5=远, 随距离走 (2026-08-24深挖)";
+CM_ SG_ 901 RollSub1 "b1 滚动码低4位, 与主目标同源帧校验 (2026-08-24)";
+CM_ SG_ 901 dRel_slot1b "PARTIAL(cabana,28段): 有效段18/28(64%), 有效率中位19.3%.";
+CM_ SG_ 901 dRel_slot1b "池A槽1副距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 902 RADAR_386: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot1c : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 902 dRel_slot1c "PARTIAL(cabana,28段): 有效段14/28(50%), 有效率中位0.9%. 多数空闲.";
+CM_ SG_ 902 dRel_slot1c "池A槽1副2距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 903 RADAR_387: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot1d : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 903 dRel_slot1d "实测(45段): 哨兵=4(占81-87%%帧), 真目标帧<1%%, 非100%%匹配. 原'100%%有效'是哨兵4(19.5m)冒充. 参考用, 不标VERIFIED.";
+CM_ SG_ 903 dRel_slot1d "池A槽1副3距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 905 RADAR_389: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ RollSub2 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ CycleSub2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ LevelSub2 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot2b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+ SG_ AzimSub2 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+CM_ SG_ 905 AzimSub2 "SUB fangwei 128-zhongxin b6-128 SUB偏-3.6=biandao (2026-08-24)";
+CM_ SG_ 905 CycleSub2 "b2 通用周期标志位 0/128: 6-7帧90%周期翻转, 所有方位翻转率~50%, 与距离/方位无关, 非隔离栏/对向车/切换专属 = ARS4xx刷新节拍 (2026-08-24深挖)";
+CM_ SG_ 905 LevelSub2 "b7 距离等级 0-5: 0=远199/1=近27/2=中58/3=中远109/4-5=远, 随距离走 (2026-08-24深挖)";
+CM_ SG_ 905 RollSub2 "b1 滚动码低4位, 与主目标同源帧校验 (2026-08-24)";
+CM_ SG_ 905 dRel_slot2b "PARTIAL(cabana,28段): 有效段15/28(54%), 有效率中位1.6%.";
+CM_ SG_ 905 dRel_slot2b "池A槽2副距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 906 RADAR_38A: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot2c : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 906 dRel_slot2c "PARTIAL(cabana,28段): 有效段11/28(39%), 有效率中位0.0%. 基本无效.";
+CM_ SG_ 906 dRel_slot2c "池A槽2副2距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 907 RADAR_38B: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot2d : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 907 dRel_slot2d "实测(45段): 哨兵=4(占81-87%%帧), 真目标帧<1%%, 非100%%匹配. 原'100%%有效'是哨兵4(19.5m)冒充. 参考用, 不标VERIFIED.";
+CM_ SG_ 907 dRel_slot2d "池A槽2副3距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 909 RADAR_38D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ RollSub3 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ CycleSub3 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ LevelSub3 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot3b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+ SG_ AzimSub3 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+CM_ SG_ 909 AzimSub3 "SUB fangwei 128-zhongxin b6-128 SUB偏-3.6=biandao (2026-08-24)";
+CM_ SG_ 909 CycleSub3 "b2 通用周期标志位 0/128: 6-7帧90%周期翻转, 所有方位翻转率~50%, 与距离/方位无关, 非隔离栏/对向车/切换专属 = ARS4xx刷新节拍 (2026-08-24深挖)";
+CM_ SG_ 909 LevelSub3 "b7 距离等级 0-5: 0=远199/1=近27/2=中58/3=中远109/4-5=远, 随距离走 (2026-08-24深挖)";
+CM_ SG_ 909 RollSub3 "b1 滚动码低4位, 与主目标同源帧校验 (2026-08-24)";
+CM_ SG_ 909 dRel_slot3b "PARTIAL(cabana,28段): 有效段12/28(43%), 有效率中位0.0%.";
+CM_ SG_ 909 dRel_slot3b "池A槽3副距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 910 RADAR_38E: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot3c : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 910 dRel_slot3c "PARTIAL(cabana,28段): 有效段8/28(29%), 有效率中位0.0%. 基本无效.";
+CM_ SG_ 910 dRel_slot3c "池A槽3副2距离 0.4244*b3+17.79 (深挖验证)";
+
+BO_ 911 RADAR_38F: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot3d : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+CM_ SG_ 911 dRel_slot3d "实测(45段): 哨兵=4(占81-87%%帧), 真目标帧<1%%, 非100%%匹配. 原'100%%有效'是哨兵4(19.5m)冒充. 参考用, 不标VERIFIED.";
+CM_ SG_ 911 dRel_slot3d "池A槽3副3距离 0.4244*b3+17.79 (深挖验证)";
+
+
+VAL_ 896 type_TA0 7 "汽车" 3 "电瓶车" 6 "停车前车" 5 "三轮" 255 "空闲" 0 "无目标" ;
+VAL_ 900 type_TA1 7 "汽车" 3 "电瓶车" 6 "停车前车" 5 "三轮" 255 "空闲" 0 "无目标" ;
+VAL_ 904 type_TA2 7 "汽车" 3 "电瓶车" 6 "停车前车" 5 "三轮" 255 "空闲" 0 "无目标" ;
+VAL_ 908 type_TA3 7 "汽车" 3 "电瓶车" 6 "停车前车" 5 "三轮" 255 "空闲" 0 "无目标" ;
+
+CM_ SG_ 896 dRel_slot0 "VERIFIED: 池A槽0距离 val*0.4244+17.79, 4496帧活跃";
+CM_ SG_ 900 dRel_slot1 "VERIFIED: 池A槽1距离";
+CM_ SG_ 904 dRel_slot2 "VERIFIED: 池A槽2距离, 高密度场景激活(1752帧)";
+CM_ SG_ 908 dRel_slot3 "VERIFIED: 池A槽3距离, 高密度场景激活(684帧)";
+CM_ SG_ 469662235 vEgo_quant "WARNING: 车速区间指示(16档粗粒度), 非精确车速, corr-0.728 R2=0.53";
+CM_ SG_ 134117888 lane_zone "WARNING: 横向分区编码(离散3档 0/1/5), 含义待定, 非连续横向";
+CM_ SG_ 265 MainDist "NOTE: 速度信号/相对速度/偏航率 经全量证伪不存在";
+
+CM_ BO_ 911 "2026-08-21 补齐: 全bus扫描遗漏地址";
+
+BO_ 266 RADAR_10A: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 832 RADAR_340: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ AzimB7 : 56|8@1+ (1,-128) [-128|127] "deg" RADAR
+
+BO_ 835 RADAR_343: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 838 RADAR_346: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 841 RADAR_349: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 849 RADAR_351: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 850 RADAR_352: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 851 RADAR_353: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 852 RADAR_354: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 913 RADAR_391: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot4b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+ SG_ AzimSub4 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+
+BO_ 914 RADAR_392: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 915 RADAR_393: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 917 RADAR_395: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+ SG_ dRel_slot5b : 24|8@1+ (0.4244,17.79) [0|255] "m" RADAR
+ SG_ AzimSub5 : 48|8@1+ (1,-128) [-128|127] "deg" RADAR
+
+BO_ 918 RADAR_396: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 919 RADAR_397: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 986 RADAR_3DA: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 987 RADAR_3DB: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 988 RADAR_3DC: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 989 RADAR_3DD: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 990 RADAR_3DE: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 991 RADAR_3DF: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 992 RADAR_3E0: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 993 RADAR_3E1: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 994 RADAR_3E2: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 995 RADAR_3E3: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 996 RADAR_3E4: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 997 RADAR_3E5: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 998 RADAR_3E6: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 999 RADAR_3E7: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1000 RADAR_3E8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1001 RADAR_3E9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1002 RADAR_3EA: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1003 RADAR_3EB: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1004 RADAR_3EC: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1005 RADAR_3ED: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1006 RADAR_3EE: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1007 RADAR_3EF: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1008 RADAR_3F0: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1009 RADAR_3F1: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1010 RADAR_3F2: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1011 RADAR_3F3: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1012 RADAR_3F4: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1013 RADAR_3F5: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1014 RADAR_3F6: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1015 RADAR_3F7: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1016 RADAR_3F8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1017 RADAR_3F9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1018 RADAR_3FA: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1019 RADAR_3FB: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1020 RADAR_3FC: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1021 RADAR_3FD: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1022 RADAR_3FE: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1023 RADAR_3FF: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 85 VEH_055: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 140 VEH_08C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 213 VEH_0D5: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 269 VEH_10D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 270 VEH_10E: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 287 VEH_11F: 5 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 289 VEH_121: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 290 VEH_122: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 291 VEH_123: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 301 VEH_12D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 307 VEH_133: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 315 VEH_13B: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 356 VEH_164: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 371 VEH_173: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 496 VEH_1F0: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 522 VEH_20A: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 523 VEH_20B: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 525 VEH_20D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 527 VEH_20F: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 530 VEH_212: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 536 VEH_218: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 537 VEH_219: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 544 VEH_220: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 546 VEH_222: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 547 VEH_223: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 576 VEH_240: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 577 VEH_241: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 578 VEH_242: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 588 VEH_24C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 593 VEH_251: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 596 VEH_254: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 635 VEH_27B: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 636 VEH_27C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 638 VEH_27E: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 660 VEH_294: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 694 VEH_2B6: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 781 VEH_30D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 784 VEH_310: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 788 VEH_314: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 790 VEH_316: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 792 VEH_318: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 797 VEH_31D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 798 VEH_31E: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 800 VEH_320: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 801 VEH_321: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 802 VEH_322: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 812 VEH_32C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 813 VEH_32D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 814 VEH_32E: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 815 VEH_32F: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 827 VEH_33B: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 828 VEH_33C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 829 VEH_33D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 834 VEH_342: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 847 VEH_34F: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 854 VEH_356: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 860 VEH_35C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 863 VEH_35F: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 879 VEH_36F: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 926 VEH_39E: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 944 VEH_3B0: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 946 VEH_3B2: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 948 VEH_3B4: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1036 VEH_40C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1037 VEH_40D: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1040 VEH_410: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1048 VEH_418: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1058 VEH_422: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1074 VEH_432: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1104 VEH_450: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1141 VEH_475: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1172 VEH_494: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1178 VEH_49A: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1180 VEH_49C: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1193 VEH_4A9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1208 VEH_4B8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1209 VEH_4B9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1219 VEH_4C3: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1224 VEH_4C8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1240 VEH_4D8: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1241 VEH_4D9: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+BO_ 1246 VEH_4DE: 8 RADAR
+ SG_ B0 : 0|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B1 : 8|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B2 : 16|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B3 : 24|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B4 : 32|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B5 : 40|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B6 : 48|8@1+ (1,0) [0|255] "" RADAR
+ SG_ B7 : 56|8@1+ (1,0) [0|255] "" RADAR
+
+CM_ SG_ 968 dRel_B3C8 "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 969 dRel_B3C9 "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 970 dRel_B3CA "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 971 dRel_B3CB "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 972 dRel_B3CC "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 973 dRel_B3CD "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 974 dRel_B3CE "🔴2026-08-22禁止: 0.4244公式不可靠(b3乱跳110->56->62m非连续距离, 96%帧3-120m假目标), radar_interface _POOLB_ADDRS=[]已禁用, 待标定";
+CM_ SG_ 833 azim_deg_341 "非100%匹配: 方位角公式 (b4-128)*0.5°, 与真值corr仅0.975(非0.981), 28段有值但值未达100%精确. 仅参考, 不作为精确方位依据. 标准: 非100%不标VERIFIED.";
+CM_ SG_ 836 azim_deg_344 "非100%匹配: 方位角公式 (b4-128)*0.5°, 与真值corr仅0.975(非0.981), 28段有值但值未达100%精确. 仅参考, 不作为精确方位依据. 标准: 非100%不标VERIFIED.";
+CM_ SG_ 839 azim_deg_347 "非100%匹配: 方位角公式 (b4-128)*0.5°, 与真值corr仅0.975(非0.981), 28段有值但值未达100%精确. 仅参考, 不作为精确方位依据. 标准: 非100%不标VERIFIED.";
+CM_ SG_ 842 azim_deg_34A "非100%匹配: 方位角公式 (b4-128)*0.5°, 与真值corr仅0.975(非0.981), 28段有值但值未达100%精确. 仅参考, 不作为精确方位依据. 标准: 非100%不标VERIFIED.";
+CM_ SG_ 968 dRel_B3C8 "🔴2026-08-24禁止: 1)0.4244公式不可靠(见下), 2)实测空闲哨兵=247(非255), 100%帧中大量247空闲值冒充活跃, 真目标帧<6%. radar_interface _POOLB_ADDRS=[]已禁用, 待标定.";
+CM_ SG_ 912 dRel_slot4 "实测(45段): 空闲哨兵=247, 100%帧恒247从不活跃. 0.4244*b3+17.79公式未验证(无真目标帧). 参考用, 非VERIFIED.";
+CM_ SG_ 916 dRel_slot5 "实测(45段): 空闲哨兵=247, 100%帧恒247从不活跃. 0.4244*b3+17.79公式未验证(无真目标帧). 参考用, 非VERIFIED.";
+CM_ SG_ 969 dRel_B3C9 "🔴2026-08-24禁止: 实测空闲哨兵=247(非255), 100%帧中大量247空闲值冒充活跃, 真目标帧<6%. radar_interface _POOLB_ADDRS=[]已禁用, 待标定.";

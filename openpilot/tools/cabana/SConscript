@@ -4,7 +4,7 @@ import shutil
 
 import libusb
 
-Import('env', 'arch', 'common', 'messaging', 'visionipc', 'cereal', 'replay_lib', 'ffmpeg_libs')
+Import('env', 'arch', 'common', 'messaging', 'visionipc', 'cereal', 'ffmpeg_libs', 'replay_lib')
 
 try:
   import bootstrap_icons
