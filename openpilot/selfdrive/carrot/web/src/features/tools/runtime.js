@@ -1,6 +1,11 @@
 "use strict";
 
 import { handleWebAutoUpdateStatus, openWebSettingsDialog } from "./web_settings/controller.js";
+import {
+  bindToolsDeviceInfoCopy,
+  buildToolsDeviceInfoDialog,
+  legacyToolsDeviceInfo,
+} from "./device_info.js";
 
 // Tools page — meta info, output console, action runners, initToolsPage which
 // binds all the tool buttons. (Branch picker modal + branch utilities live in
@@ -290,15 +295,16 @@ function renderGitPullStatus(status = {}) {
   const autoUpdate = status.auto_update || {};
   const autoUpdateStatus = String(autoUpdate.status || "");
   const hasAutoUpdateError = ["error", "reboot_blocked"].includes(autoUpdateStatus);
-  const hasError = Boolean(state && state !== "ok") || hasAutoUpdateError;
-  const hasUpdates = behind > 0 && !hasError;
-  const label = hasUpdates ? (behind > 99 ? "99+" : String(behind)) : (hasError ? "X" : "✓");
+  const waiting = (state === "busy" || autoUpdateStatus === "waiting") && !hasAutoUpdateError;
+  const hasError = Boolean(state && !["ok", "busy"].includes(state)) || hasAutoUpdateError;
+  const hasUpdates = behind > 0 && !hasError && !waiting;
+  const label = waiting ? "…" : (hasUpdates ? (behind > 99 ? "99+" : String(behind)) : (hasError ? "X" : "✓"));
   button.classList.toggle("has-updates", hasUpdates);
-  button.classList.toggle("is-current", !hasUpdates && !hasError);
+  button.classList.toggle("is-current", !hasUpdates && !hasError && !waiting);
   button.classList.toggle("has-git-error", !hasUpdates && hasError);
   badge.hidden = false;
   badge.textContent = label;
-  badge.dataset.state = hasUpdates ? "updates" : (hasError ? "error" : "current");
+  badge.dataset.state = waiting ? "waiting" : (hasUpdates ? "updates" : (hasError ? "error" : "current"));
 
   if (navButton) {
     navButton.classList.toggle("has-git-updates", hasUpdates);
@@ -306,7 +312,9 @@ function renderGitPullStatus(status = {}) {
     else navButton.removeAttribute("data-git-behind");
   }
 
-  if (hasUpdates) {
+  if (waiting) {
+    button.title = getUIText("web_auto_update_waiting", "Waiting for startup or another update to finish.");
+  } else if (hasUpdates) {
     const upstream = String(status.upstream || "").trim();
     const suffix = upstream ? ` (${upstream})` : "";
     button.title = `${behind} commits available${suffix}`;
@@ -1058,30 +1066,31 @@ function initToolsPage() {
   });
 
   bindOnce("btnDeviceInfo", async () => {
-    let title = getUIText("carrot_info", "Carrot Info");
-    
+    let values = toolsMetaLastValues || {};
     try {
       if (!toolsMetaLastValues && !toolsMetaLoadPromise) {
         await refreshToolsMetaInfo({ ttlMs: 3600000 });
       }
-      const values = toolsMetaLoadPromise ? await toolsMetaLoadPromise : toolsMetaLastValues;
-      if (values) {
-        const deviceType = String(values.DeviceType || "").trim();
-        if (deviceType) {
-          const deviceFriendly = { tici: "c3", tizi: "c3x", mici: "c4" };
-          const friendly = deviceFriendly[deviceType] || deviceType;
-          const label = friendly !== deviceType ? `${friendly}/${deviceType}` : deviceType;
-          title += `(${label})`;
-        }
-      }
+      values = toolsMetaLoadPromise ? await toolsMetaLoadPromise : toolsMetaLastValues || {};
     } catch (e) {}
-
-    appAlert(toolsMetaInfoDialogText || toolsMetaInfoText, {
-      title,
+    const legacy = legacyToolsDeviceInfo(values);
+    let info = legacy;
+    try {
+      const payload = await getJson("/api/tools/device_info");
+      if (payload?.ok && payload.info) info = payload.info;
+    } catch (e) {}
+    const dialog = buildToolsDeviceInfoDialog(info);
+    appAlert("", {
+      title: dialog.title,
       html: true,
-      messageHtml: toolsMetaInfoDialogText,
-      copyText: buildToolsMetaPlainText(toolsMetaLastValues || {}),
+      messageHtml: dialog.html,
+      copyText: dialog.supportCopyText,
+      copyLabel: getUIText("copy", "Copy"),
+      hideTitle: true,
+      dialogLabel: dialog.title,
+      variant: "tools-device-info",
     });
+    bindToolsDeviceInfoCopy(document, dialog.imeiCopyText);
   });
 
   bindOnce("btnGitPull", async () => {
@@ -1529,4 +1538,3 @@ export {
   getToolCommandPreview,
   renderToolsMeta,
 };
-
