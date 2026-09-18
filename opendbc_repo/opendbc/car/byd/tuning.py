@@ -33,15 +33,15 @@ class Tuning:
   # 解决某些 D9 或者唐车型，离手时间过久，EPS会退出问题。
   # 解决办法是特定周期退出控制再马上接管（需在 carcontroller 实现消费逻辑，当前仅预留参数）
   HANDSOFF_ANGLE =  [4, 11, 18] #方向盘旋转的角度，不分左右，这里都是正值
-  HANDSOFF_PERIOD = [12, 24, 36] #方向盘放开的周期，单位s (2026-09-04 08:49 用户定: HANDSOFF判据改回need_steer后, PERIOD配套回REF[12,24,36], 撤销CP11平均[9,17,26]; index0=12 被 carcontroller 消费, 12s<车机15秒离手退出ACC)
+  HANDSOFF_PERIOD = [5, 10, 15] #方向盘放开的周期，单位s
 
   # EPS 故障/警告计数阈值（需在 carstate 实现消费逻辑，当前仅预留参数）
   EPS_ANGLE_EXCEED_WARNING_CNT = 3
   EPS_ANGLE_SPEED_WARNING_CNT = 3
 
   # 禁用EPS故障检查, 某些车有EPS固件比较奇怪报错的话，则可以设为True
-  DISABLE_EPS_WARNING = False
+  DISABLE_EPS_WARNING = True
   DISABLE_EPS_TEMPORARY_FAULT = False
-  DISABLE_EPS_PERMANENT_FAULT = True
+  DISABLE_EPS_PERMANENT_FAULT = False
 
   DISABLE_PARKBRAKE = False

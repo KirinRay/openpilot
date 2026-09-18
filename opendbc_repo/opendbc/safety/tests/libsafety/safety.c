@@ -11,3 +11,6 @@
 
 // libsafety stuff
 #include "safety_helpers.h"
+
+// fix: provide definition for extern bool referenced by hyundai_canfd buffered fwd
+bool safety_tx_buffered_for_fwd = false;

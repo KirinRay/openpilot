@@ -5,7 +5,7 @@ import imgui
 import libusb
 from openpilot.common.basedir import BASEDIR
 
-Import('env', 'arch', 'common', 'messaging', 'visionipc', 'cereal', 'replay_lib', 'ffmpeg_libs')
+Import('env', 'arch', 'common', 'messaging', 'visionipc', 'cereal', 'ffmpeg_libs', 'replay_lib')
 
 opendbc_path = '-DOPENDBC_FILE_PATH=\'"%s"\'' % (env.Dir("../../../opendbc_repo/opendbc/dbc").abspath)
 

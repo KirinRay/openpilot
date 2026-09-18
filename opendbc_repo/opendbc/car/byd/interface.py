@@ -4,20 +4,31 @@ from math import exp
 from opendbc.car import get_safety_config, get_friction, structs
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType, FRICTION_THRESHOLD, LatControlInputs
-from opendbc.car.byd.values import CAR, CanBus, BydSafetyFlags, MPC_ACC_CAR
+from opendbc.car.byd.values import CAR, CanBus, BydSafetyFlags, MPC_ACC_CAR, TORQUE_LAT_CAR, EXP_LONG_CAR, \
+                                PLATFORM_HANTANG_DMEV, PLATFORM_TANG_DMI, PLATFORM_HAN_DMI, PLATFORM_SONG_PLUS_DMI, PLATFORM_QIN_PLUS_DMI, PLATFORM_YUAN_PLUS_DMI_ATTO3
 from opendbc.car.byd.carcontroller import CarController
 from opendbc.car.byd.carstate import CarState
 from opendbc.car.byd.radar_interface import RadarInterface
+
+import os
+try:
+  from openpilot.common.params import Params
+except Exception:
+  Params = None  # opendbc 独立环境(如测试)无 Params 时回退 fingerprint 判断
 
 ButtonType = structs.CarState.ButtonEvent.Type
 GearShifter = structs.CarState.GearShifter
 TransmissionType = structs.CarParams.TransmissionType
 NetworkLocation = structs.CarParams.NetworkLocation
 
-# 唐DM 非线性横向扭矩参数 (实车验证, 对齐 CP11 BydLatUseSiglin=1 默认开)
 NON_LINEAR_TORQUE_PARAMS = {
+  CAR.BYD_HAN_DM_20: [1.807, 1.674, 0.04],
+  CAR.BYD_HAN_EV_20: [1.807, 1.674, 0.04],
   CAR.BYD_TANG_DM: [1.807, 1.674, 0.04],
+  CAR.BYD_SONG_PLUS_DMI_21: [1.807, 1.674, 0.04]
 }
+
+BYD_RADAR = os.getenv("BYD_RADAR") is not None
 
 class CarInterface(CarInterfaceBase):
     CarState = CarState
@@ -37,59 +48,111 @@ class CarInterface(CarInterfaceBase):
                 return z / (1 + z) - 0.5
 
         # The "lat_accel vs torque" relationship is assumed to be the sum of "sigmoid + linear" curves
-        non_linear_torque_params = NON_LINEAR_TORQUE_PARAMS[self.CP.carFingerprint]
+        # An important thing to consider is that the slope at 0 should be > 0 (ideally >1)
+        # This has big effect on the stability about 0 (noise when going straight)
+        non_linear_torque_params = NON_LINEAR_TORQUE_PARAMS.get(self.CP.carFingerprint)
+        assert non_linear_torque_params, "The params are not defined"
         a, b, c = non_linear_torque_params
         steer_torque = (sig(latcontrol_inputs.lateral_acceleration * a) * b) + (latcontrol_inputs.lateral_acceleration * c)
-        return float(steer_torque) + friction  # 唐DM 非线性扭矩 (干净版, 无除法削弱)
+        return float(steer_torque / torque_params.latAccelFactor) + friction  # 实车版: 除以latAccelFactor(对齐加密备份)
 
     def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
-        # 唐DM 默认 siglin 非线性曲线 (对齐 CP11 BydLatUseSiglin=1)
-        return self.torque_from_lateral_accel_siglin
+        # 实车版: 用 Params BydLatUseSiglin 参数运行时可切换 siglin/linear
+        # 兼容: BydLatUseSiglin 未定义 或 Params 不可用(独立测试)时回退 fingerprint 判断, 保证系统运行正确
+        if Params is not None:
+            try:
+                use_siglin = Params().get_bool("BydLatUseSiglin")
+                return self.torque_from_lateral_accel_siglin if use_siglin else self.torque_from_lateral_accel_linear
+            except Exception:
+                pass  # 参数未定义, 回退 fingerprint 判断
+        if self.CP.carFingerprint in NON_LINEAR_TORQUE_PARAMS:
+            return self.torque_from_lateral_accel_siglin
+        else:
+            return self.torque_from_lateral_accel_linear
 
     @staticmethod
     def _get_params(ret: structs.CarParams, candidate, fingerprint, car_fw, experimental_long, is_release, docs) -> structs.CarParams: # type: ignore
         ret.brand = "byd"
         _safety = structs.CarParams.SafetyModel.byd
         ret.safetyConfigs = [get_safety_config(_safety)]
-        # 唐DM safetyParam = HAN_TANG_DMEV(0x1): 默认扭矩 lat 模式 (对齐 CP11 safety_byd.h 默认分支)
-        ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.HAN_TANG_DMEV.value
 
         ret.dashcamOnly = False
-        # 唐DM 原厂雷达 = Continental ARS4xx, 由 radar_interface 读 bus1 0x109/0x380 (CP11 已验证控车)
-        ret.radarUnavailable = False
-        ret.radarTimeStep = 0.04  # 唐DM 主目标 25Hz (1/25; 权威 08-18: 主25.7Hz 副15.3Hz)
+        #disable simple pt radar due to mpc solver issue in official OP. It works with carrot/sunny/forg.
+        if BYD_RADAR:
+            ret.radarUnavailable = False
+        else:
+            ret.radarUnavailable = True #candidate not in PT_RADAR_CAR
+
 
         ret.minEnableSpeed = -1.
         ret.enableBsm = 0x418 in fingerprint[CanBus.ESC]
         ret.transmissionType = TransmissionType.direct
 
+        ret.minEnableSpeed = -1.
         ret.minSteerSpeed = 0.1 * CV.KPH_TO_MS
 
-        ret.steerActuatorDelay = 0.2  # 实车版验证值(对齐加密备份)
+        ret.steerActuatorDelay = 0.2  # 实车版验证值(对齐加密备份), 注释: 测量0.4但torqued.py会再加0.2
         ret.steerLimitTimer = 0.6  # 实车版验证值(对齐加密备份)
+
+        if candidate in PLATFORM_HANTANG_DMEV:
+            ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.HAN_TANG_DMEV.value
+        elif candidate in PLATFORM_TANG_DMI:
+            ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.TANG_DMI.value
+        elif candidate in PLATFORM_HAN_DMI:
+            ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.TANG_DMI.value  # 汉DM-i 同唐DM-i 扭矩控制
+        elif candidate in PLATFORM_SONG_PLUS_DMI:
+                    ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.SONG_PLUS_DMI.value
+        elif candidate in PLATFORM_QIN_PLUS_DMI:
+                    ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.QIN_PLUS_DMI.value
+        elif candidate in PLATFORM_YUAN_PLUS_DMI_ATTO3:
+                    ret.safetyConfigs[0].safetyParam |= BydSafetyFlags.YUAN_PLUS_DMI_ATTO3.value
 
         if candidate in MPC_ACC_CAR:
             ret.networkLocation = NetworkLocation.fwdCamera
 
-        # 唐DM 走扭矩 lat 控制 (对齐 CP11)
-        CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+        use_torque_lat = candidate in TORQUE_LAT_CAR
 
-        # 唐DM 直接开纵向 (对齐 CP11 EXP_LONG_CAR)
-        ret.alphaLongitudinalAvailable = True
-        ret.openpilotLongitudinalControl = True
+        if use_torque_lat:
+            CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+        else:
+            ret.lateralTuning.init('pid')
+            ret.lateralTuning.pid.kpBP, ret.lateralTuning.pid.kiBP = [[8.3 , 27.8], [8.3 , 27.8]]
+            ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV   = [[0.6 ,  0.3], [0.2 ,  0.1]]
+            ret.lateralTuning.pid.kf = 0.000072
+
+        use_experimental_long = candidate in EXP_LONG_CAR
+
+        ret.alphaLongitudinalAvailable = use_experimental_long
+        ret.openpilotLongitudinalControl = experimental_long and ret.alphaLongitudinalAvailable
 
         ret.longitudinalTuning.kpBP, ret.longitudinalTuning.kiBP = [[0.], [0.]]
         ret.longitudinalTuning.kpV,  ret.longitudinalTuning.kiV  = [[1.0], [0.]]  # kpV=1.0 实车版验证值(对齐加密备份)
         ret.longitudinalTuning.kf = 1.0  # 实车版验证值(对齐加密备份)
 
-        # model specific parameters (唐DM)
-        ret.minSteerSpeed = 0
-        ret.autoResumeSng = True
-        ret.startingState = True
-        ret.startAccel = 0.8
-        ret.stopAccel = -0.3  # 唐DM 停车减速度 (对齐 CP11)
-        ret.vEgoStarting = 0.1 * CV.KPH_TO_MS  # 起步速度阈值 (对齐 CP11)
-        ret.vEgoStopping = 0.1 * CV.KPH_TO_MS
-        ret.longitudinalActuatorDelay = 0.5
+        # model specific parameters
+        # Todo: Developers please fill or add more models.
+        if candidate in (CAR.BYD_HAN_DM_20, CAR.BYD_HAN_EV_20, CAR.BYD_TANG_DM, CAR.BYD_SONG_PLUS_DMI_21, CAR.BYD_TANG_DMI_21, CAR.BYD_SONG_PLUS_DMI_22, CAR.BYD_SONG_PLUS_DMI_23, CAR.BYD_SONG_PRO_DMI_22, CAR.BYD_QIN_PLUS_DMI_23, CAR.BYD_YUAN_PLUS_DMI_22, CAR.BYD_TANG_DMI_24, CAR.BYD_TANG_DMP_22, CAR.BYD_TANG_DMP_23, CAR.BYD_HAN_DMI_22):
+            ret.minSteerSpeed = 0
+            ret.autoResumeSng = True
+            ret.startingState = True
+            ret.startAccel = 0.8
+            ret.stopAccel = -0.5
+            ret.vEgoStarting = 0.2 * CV.KPH_TO_MS
+            ret.vEgoStopping = 0.1 * CV.KPH_TO_MS
+            ret.longitudinalActuatorDelay = 0.5
+        else:
+            ret.dashcamOnly = True
 
         return ret
+
+
+# byd tuning suggestions
+# torque mode (linear):
+#   -Start with P = 1.0 and I = 0, FRICTION = 0, change the LAT_ACCEL_FACTOR until
+#    vehicle can just about to go thought a medium curve at medium speed(say 50kph)
+#   -Find a straight road and tune FRICTION until car stay in same position of lane,
+#    don't worry if car hugs to left or right.
+#   -I = 0.1 (default) then try. Keep tuning all values until you get a good enough
+#    result. Commaai's PI loop have a funny anti-wind up method.
+#   -Add the steering angle speed (angle slew rate) to stop the control loop from
+#    tuning wheel too sharp.

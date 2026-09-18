@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+﻿from dataclasses import dataclass, field
 from enum import IntFlag
 from opendbc.car import Bus, DbcDict, PlatformConfig, Platforms, CarSpecs
 from opendbc.car.structs import CarParams
@@ -8,15 +8,10 @@ from opendbc.car.fw_query_definitions import FwQueryConfig, Request, StdQueries
 Ecu = CarParams.Ecu
 
 class CarControllerParams:
-  # 2026-09-04 09:28 用户定: 恢复横向参数为 REF(正常版 C:\Users\xufen\Desktop\opendbc) 值 —— 路试横向不稳定。
-  #   REF 长时间稳定跑过, 300/12 改动(09-03/09-04)后横向不稳定 → 全部回 REF 280/6/9。
-  #   (此前曾因 EPS实测-297~316/tight弯建矩 调大过; 现据路试回归 REF 保守值优先稳定性)
-  STEER_MAX = 280   # REF (原曾 290→300, 现回 280)
-  STEER_DELTA_UP = 6   # REF (原曾 16→12, 现回 6)
+  STEER_MAX = 280
+  STEER_DELTA_UP = 6
   STEER_DELTA_DOWN = 9
 
-  # (2026-09-02 H3 曾提议 68→110, 已撤回: yysnet 汉官方验证版即用 68 无对抗问题;
-  #  黄金"司机单打手力大 -316"不适用"司机+OP对抗"场景; 68 让司机抢盘更早更安全. 保持官方 68)
   STEER_DRIVER_ALLOWANCE = 68
   STEER_DRIVER_MULTIPLIER = 3
   STEER_DRIVER_FACTOR = 1
@@ -24,13 +19,6 @@ class CarControllerParams:
 
   STEER_STEP = 2  #100/2=50hz
   STEER_SOFTSTART_STEP = 6 # 20ms(50Hz) * 300 / 6 = 1000ms. This means the clip ceiling will be increased to 300 in 1000ms
-
-  # BYD EPS 在车近乎静止(vEgo<STEER_LOW_SPEED_V)时最大可承受电机扭矩约60,
-  # 超过即永久 TorqueFailed(需重启车)。此处仅在 vEgo<0.6 m/s 时把最终下发扭矩限到 ±STEER_LOW_SPEED_MAX(40),
-  # 对应最坏eps~45(留~15余量)。hands-off 时 eps≈cmd(1:1, 实测EPS放大≤13%)。
-  # (V9 横向 100% 学习: 2026-09-02 补, 防 ESC TorqueFailed 永久故障)
-  STEER_LOW_SPEED_V = 0.6      # m/s, 进入静止保护的车速阈值
-  STEER_LOW_SPEED_MAX = 40     # raw 扭矩单位(= motor torque), 对应最坏eps~45(留~15余量)
 
   ACC_STEP = 2    #50hz
 
@@ -45,12 +33,7 @@ class CarControllerParams:
   K_accel_jerk_upper = 0.1
   K_accel_jerk_lower = 0.5
   K_jerk_xp =            [   4,   10,   20,   40,   80]  # meters
-  # 汇报审核 2026-09-03 (用户定选B最小改): 近距 4m 端 -2.3→-1.8 收浅。
-  #   动机: realdata 全量 506 次自主无脚刹车事件长尾过猛(8次>0.35g/14次>0.3g/最深aEgo-5.23), 集中在近距离前车收紧;
-  #         现 acc_cmd 刹车时 jerk_lower = base + accel*0.5, 4m端-2.3 + (-3.5*0.5) 达 -4.05, 近距第一口太陡。
-  #   改后 4m端: accel-3.5 → -3.55(较-4.05收浅~0.5), 渐进起步刹车; 仍保留刹到-3.5能力。ACCEL_MIN=-3.5/K_jerk_xp/中远距不动。
-  #   (2026-09-03 用户批AB执行): 方案A铺开已完成 → 10m:-1.8→-1.5 / 20m:-1.4→-1.3, 近距整段缓刹; 4m保持-1.8/40m-1.0/80m-0.4。
-  K_jerk_base_lower_fp = [-1.8, -1.5, -1.3, -1.0, -0.4]
+  K_jerk_base_lower_fp = [-2.3, -1.8, -1.4, -1.0, -0.4]
   K_jerk_base_upper_fp = [ 0.8,  0.7,  0.6,  0.3,  0.2]
 
   def __init__(self, CP):
@@ -80,10 +63,94 @@ class BydPlatformConfig(PlatformConfig):
   #todo add dbc for other models
 
 class CAR(Platforms):
+  BYD_HAN_DM_20 = BydPlatformConfig(
+    [BydCarDocs("BYD HAN DM 20")],
+    CarSpecs(mass=2080., wheelbase=2.920, steerRatio=16.8, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+  BYD_HAN_EV_20 = BydPlatformConfig(
+    [BydCarDocs("BYD HAN EV 20")],
+    CarSpecs(mass=2100., wheelbase=2.959, steerRatio=16.8, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  #The following parameters are likely be incorrect, developers please fill and fix them.
+
   BYD_TANG_DM = BydPlatformConfig(
     [BydCarDocs("BYD TANG DM")],
     CarSpecs(mass=2390., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
   )
+
+  BYD_TANG_DMI_21 = BydPlatformConfig(
+    [BydCarDocs("BYD TANG DMI 21")],
+    CarSpecs(mass=2153., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  # === 实车版(加密备份)新增车型, CarSpecs 为行业参考值(待实车验证), 指纹来自实车版 ===
+  BYD_TANG_DMI_24 = BydPlatformConfig(
+    [BydCarDocs("BYD TANG DMI 24")],
+    CarSpecs(mass=2153., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 待实车验证
+  )
+
+  BYD_TANG_DMP_22 = BydPlatformConfig(
+    [BydCarDocs("BYD TANG DM-P 22")],
+    CarSpecs(mass=2390., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 待实车验证
+  )
+
+  BYD_TANG_DMP_23 = BydPlatformConfig(
+    [BydCarDocs("BYD TANG DM-P 23")],
+    CarSpecs(mass=2390., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 待实车验证
+  )
+
+  BYD_HAN_DMI_22 = BydPlatformConfig(
+    [BydCarDocs("BYD HAN DMI 22")],
+    CarSpecs(mass=2080., wheelbase=2.920, steerRatio=16.8, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 待实车验证
+  )
+
+  BYD_SONG_PLUS_DMI_21 = BydPlatformConfig(
+    [BydCarDocs("BYD SONG PLUS DMI 21")],
+    CarSpecs(mass=1785., wheelbase=2.765, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  BYD_SONG_PLUS_DMI_22 = BydPlatformConfig(
+    [BydCarDocs("BYD SONG PLUS DMI 22")],
+    CarSpecs(mass=1785., wheelbase=2.765, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  BYD_SONG_PLUS_DMI_23 = BydPlatformConfig(
+    [BydCarDocs("BYD SONG PLUS DMI 23")],
+    CarSpecs(mass=1785., wheelbase=2.765, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  BYD_SONG_PRO_DMI_22 = BydPlatformConfig(
+    [BydCarDocs("BYD SONG PRO DMI 22")],
+    CarSpecs(mass=1670., wheelbase=2.712, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  BYD_QIN_PLUS_DMI_23 = BydPlatformConfig(
+    [BydCarDocs("BYD QIN PLUS DMI 23")],
+    CarSpecs(mass=1580., wheelbase=2.718, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  BYD_YUAN_PLUS_DMI_22 = BydPlatformConfig(
+    [BydCarDocs("BYD YUAN PLUS DMI 22")],
+    CarSpecs(mass=1625., wheelbase=2.720, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),
+  )
+
+  # === 占位车型 (仅需唐DM, 以下为指纹占位, CarSpecs 复用唐DM, 待实车验证) ===
+  BYD_SEAL_23 = BydPlatformConfig(
+    [BydCarDocs("BYD SEAL 23")],
+    CarSpecs(mass=2390., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 占位, 待实车
+  )
+
+  BYD_TENGSHI_D9_22 = BydPlatformConfig(
+    [BydCarDocs("BYD TENGSHI D9 22")],
+    CarSpecs(mass=2390., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 占位, 待实车
+  )
+
+  BYD_TENGSHI_D9_24 = BydPlatformConfig(
+    [BydCarDocs("BYD TENGSHI D9 24")],
+    CarSpecs(mass=2390., wheelbase=2.820, steerRatio=15.0, centerToFrontRatio=0.44, tireStiffnessFactor=1.0),  # TODO: 占位, 待实车
+  )
+
 
 class LKASConfig:
   DISABLE = 0
@@ -106,11 +173,24 @@ FW_QUERY_CONFIG = FwQueryConfig(
   ],
 )
 
-# ==== 唐DM 单车规范版 (carrot-wip 9081364): 平台/总线/控制断言 仅唐DM ====
-MPC_ACC_CAR = {CAR.BYD_TANG_DM}    # power train canbus 位于 MPC 连接器
-PT_RADAR_CAR = {CAR.BYD_TANG_DM}   # power train canbus 含 mrr 雷达信息
-TORQUE_LAT_CAR = {CAR.BYD_TANG_DM} # 唐DM 扭矩横向控制
-EXP_LONG_CAR = {CAR.BYD_TANG_DM}   # 唐DM experimental long
+PLATFORM_HANTANG_DMEV = {CAR.BYD_HAN_DM_20, CAR.BYD_HAN_EV_20, CAR.BYD_TANG_DM}
+PLATFORM_TANG_DMI = {CAR.BYD_TANG_DMI_21, CAR.BYD_TANG_DMI_24, CAR.BYD_TANG_DMP_22, CAR.BYD_TANG_DMP_23}
+PLATFORM_HAN_DMI = {CAR.BYD_HAN_DMI_22}  # 实车版新增: 汉DM-i (torque控制, 同平台)
+PLATFORM_SONG_PLUS_DMI = {CAR.BYD_SONG_PLUS_DMI_21, CAR.BYD_SONG_PLUS_DMI_22, CAR.BYD_SONG_PLUS_DMI_23, CAR.BYD_SONG_PRO_DMI_22}
+PLATFORM_QIN_PLUS_DMI = {CAR.BYD_QIN_PLUS_DMI_23}
+PLATFORM_YUAN_PLUS_DMI_ATTO3 = {CAR.BYD_YUAN_PLUS_DMI_22}
+
+# power train canbus is located and accessible in in MPC connector
+MPC_ACC_CAR = {CAR.BYD_HAN_DM_20, CAR.BYD_HAN_EV_20, CAR.BYD_TANG_DM}
+
+# power train canbus contains mrr radar info
+PT_RADAR_CAR = {CAR.BYD_HAN_DM_20, CAR.BYD_HAN_EV_20, CAR.BYD_TANG_DM}
+
+# use torque lat control, otherwise use angle mode
+TORQUE_LAT_CAR = {CAR.BYD_HAN_DM_20, CAR.BYD_HAN_EV_20, CAR.BYD_TANG_DM, CAR.BYD_SONG_PLUS_DMI_21}
+
+# use experimental long mode
+EXP_LONG_CAR = {CAR.BYD_HAN_DM_20, CAR.BYD_HAN_EV_20, CAR.BYD_TANG_DM, CAR.BYD_SONG_PLUS_DMI_21}
 
 DBC = CAR.create_dbc_map()
 
