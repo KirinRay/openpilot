@@ -326,7 +326,6 @@
               "zh": "停车与再起步",
               "params": [
                 "StopDistanceCarrot",
-                "StoppingAccel",
                 "VEgoStopping",
                 "AChangeCostStarting"
               ]
@@ -404,6 +403,7 @@
           "params": [
             "CanfdHDA2",
             "CanfdDebug",
+            "CanfdStopRetry",
             "HDPuse"
           ]
         },
@@ -1907,7 +1907,7 @@
       "cdescr": "0: 弯道/摄像头减速 + 纵向控制, 1: 无按钮连发 (原厂 SCC), 2: 弯道/摄像头减速, 3: 本田/丰田",
       "min": 0,
       "max": 3,
-      "default": 0,
+      "default": 2,
       "unit": 1
     },
     {
@@ -2640,6 +2640,24 @@
     },
     {
       "group": "시작",
+      "name": "CanfdStopRetry",
+      "title": "CANFD 정지 재시도 (시험)",
+      "descr": "기본 OFF. 현대·기아 CANFD 오픈파일럿 종방향 제어용 시험 기능입니다. OFF는 기존 정지 동작, ON은 순정형 정지 요청 후 움직임이 지속되면 감속·재요청합니다. 차종별 완전 정지는 검증되지 않았습니다. 변경은 주행 중에도 약 0.5초 이내 반영됩니다. 전환 시 정지 요청 방식이 바뀝니다.",
+      "egroup": "START",
+      "etitle": "CANFD Stop Retry (Experimental)",
+      "edescr": "Default OFF. Experimental stopping for Hyundai/Kia CANFD with openpilot longitudinal control. OFF retains existing stopping; ON sends stock-like stop requests and retries with deceleration if motion persists. Complete stopping is not validated across vehicles. Changes apply during driving within about 0.5 seconds, switching the stop-request method.",
+      "cgroup": "启动设置",
+      "ctitle": "CANFD 停车重试（试验）",
+      "cdescr": "默认关闭。用于现代/起亚 CANFD 的 openpilot 纵向控制试验功能。关闭时保留原有停车控制；开启后发送类似原厂的停车请求，若持续移动则减速并重试。尚未验证所有车型均能完全停车。行驶中更改也会在约 0.5 秒内生效，并切换停车请求方式。",
+      "min": 0,
+      "max": 1,
+      "default": 0,
+      "unit": 1,
+      "control": "toggle",
+      "risk": "high"
+    },
+    {
+      "group": "시작",
       "name": "CanfdDebug",
       "title": "CANFD Debug(0)",
       "descr": "",
@@ -3218,22 +3236,6 @@
       "display_unit": "speedKph"
     },
     {
-      "group": "주행튜닝",
-      "name": "StoppingAccel",
-      "title": "정지시작가속도x0.01(-50)",
-      "descr": "정지시작가속도 조정. 현대·기아·제네시스는 부팅 후 차량 제어 초기화 시 0을 -50으로 자동 변경합니다. 다른 차종의 0은 기존방식입니다.",
-      "egroup": "LONG",
-      "etitle": "StoppingStartAccelx0.01(-50)",
-      "edescr": "Adjust stopping acceleration. Hyundai, Kia, and Genesis automatically change 0 to -50 when vehicle control initializes after boot. For other brands, 0 uses the traditional method.",
-      "cgroup": "纵向控制",
-      "ctitle": "停止起步加速度 x0.01(-50)",
-      "cdescr": "调整停止加速度。现代、起亚和捷尼赛思在启动后初始化车辆控制时自动将0改为-50。其他品牌设为0时使用传统方式。",
-      "min": -100,
-      "max": 0,
-      "default": -50,
-      "unit": 10
-    },
-    {
       "group": "가속설정",
       "name": "MyDrivingMode",
       "title": "드라이브모드:(3)",
@@ -3253,13 +3255,13 @@
       "group": "가속설정",
       "name": "MyDrivingModeAuto",
       "title": "드라이브모드: 자동",
-      "descr": "0:수동, 1:일반↔안전, 2:에코↔안전. 정지차 접근은 빠르게 안전으로 전환하고 지속 서행도 안전으로 판단합니다. 짧은 출발·앞차 소실은 안전을 해제하지 않으며 지속적인 흐름 회복이나 주행 중 앞차 없는 상태를 확인한 뒤 복귀합니다. 고속은 자동 선택하지 않습니다.",
+      "descr": "0:수동, 1:일반↔안전, 2:에코↔안전. 정지차 접근은 빠르게 안전으로 전환하고 지속 서행도 안전으로 판단합니다. 정지 접근이 아닐 때 앞차 가속도가 1.5m/s²를 초과하는 상태가 약 0.5초 이어지면 복귀합니다. 그 외에는 지속적인 흐름 회복이나 주행 중 앞차 없는 상태를 확인한 뒤 복귀합니다. 고속은 자동 선택하지 않습니다.",
       "egroup": "ACCEL",
       "etitle": "DrivingMode: Auto",
-      "edescr": "0: Manual, 1: Normal↔Safe, 2: Eco↔Safe. Stopping-lead approaches enter Safe promptly; sustained slow following also selects Safe. Brief launches or lead loss do not release Safe. Sustained flow recovery or a clear road while moving restores the base mode. High is never selected automatically.",
+      "edescr": "0: Manual, 1: Normal↔Safe, 2: Eco↔Safe. Stopping-lead approaches enter Safe promptly; sustained slow following also selects Safe. Outside a stopping approach, lead acceleration above 1.5m/s² for about 0.5 seconds restores the base mode. Otherwise, sustained flow recovery or a clear road while moving restores it. High is never selected automatically.",
       "cgroup": "加速设置",
       "ctitle": "驾驶模式: 自动",
-      "cdescr": "0:手动，1:普通↔安全，2:节能↔安全。接近停止前车时迅速进入安全模式，持续低速跟车也会进入。短暂起步或前车丢失不会解除，确认交通持续恢复或行驶中前方持续无车后才返回。不会自动选择高速模式。",
+      "cdescr": "0:手动，1:普通↔安全，2:节能↔安全。接近停止前车时迅速进入安全模式，持续低速跟车也会进入。不满足停车接近条件时，前车加速度超过1.5m/s²并持续约0.5秒即可返回。否则需确认交通持续恢复或行驶中前方持续无车。不会自动选择高速模式。",
       "min": 0,
       "max": 2,
       "default": 0,
@@ -3512,17 +3514,17 @@
     {
       "group": "감속제어",
       "name": "AutoNaviSpeedDecelRate",
-      "title": "과속카메라 감속율 x0.01m/s^2(200)",
-      "descr": "낮으면 멀리서부터 감속함",
+      "title": "과속카메라 감속율 x0.01m/s^2(120)",
+      "descr": "카메라·방지턱 접근 시 감속 곡선 계산에 사용하는 값입니다. 저장값에 0.01m/s²를 곱하며 120은 1.2m/s²입니다. 낮추면 더 먼 거리에서 감속을 시작하고, 높이면 더 가까이서 시작합니다. 기존에 저장된 설정은 업데이트만으로 바뀌지 않습니다.",
       "egroup": "SPEED",
-      "etitle": "NaviSpeedDecelRate 0.01m/s^2x(200)",
-      "edescr": "The lower the value, the further away it decelerates.",
+      "etitle": "NaviSpeedDecelRate 0.01m/s^2x(120)",
+      "edescr": "Used to calculate the deceleration curve when approaching cameras and speed bumps. The stored value is multiplied by 0.01 m/s², so 120 means 1.2 m/s². Lower values start slowing farther away; higher values start closer. Updating the software does not change an existing saved setting.",
       "cgroup": "速度控制",
-      "ctitle": "导航减速效率 0.01m/s^2x(200)",
-      "cdescr": "值越低，减速越早（距离越远）。",
+      "ctitle": "导航减速效率 0.01m/s^2x(120)",
+      "cdescr": "用于计算接近摄像头和减速带时的减速曲线。存储值乘以 0.01 m/s²，120 表示 1.2 m/s²。数值越低，开始减速的距离越远；数值越高，开始减速的距离越近。软件更新不会更改已保存的设置。",
       "min": 50,
       "max": 300,
-      "default": 200,
+      "default": 120,
       "unit": 10
     },
     {

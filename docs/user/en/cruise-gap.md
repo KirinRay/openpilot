@@ -69,10 +69,11 @@ A decreasing mode gap multiplier releases at 0.05 per second: about four seconds
 
 - **Stopping approach:** A lead at or below 5 km/h within the speed-dependent approach envelope for about 0.3 seconds selects Safe. The envelope is `ego speed² / (2 × 2.4) + 2 × ego speed` metres, clamped to 12–200 m; speeds in these formulas are in m/s.
 - **Sustained slow following:** Ego at or below 35 km/h and a lead at or below 30 km/h within following range for eight seconds selects Safe. Following range is `12 + 3 × ego speed` metres, clamped to 30–80 m.
+- **Lead acceleration:** Outside a stopping approach, lead acceleration above 1.5 m/s² for about 0.5 seconds restores Normal/Eco without waiting for six seconds of flow recovery.
 - **Flow recovery:** Both vehicles at or above 35 km/h, or a lead at or above 15 km/h pulling away by at least 1 m/s with distance at least `8 + 1.8 × ego speed` metres, must persist for six seconds. Lead acceleration below -0.2 m/s² restarts recovery confirmation.
 - **Clear road:** Valid observations of no lead while ego travels at least 15 km/h for four seconds restore the base mode. Losing a lead while stopped does not restore it.
 
-A short launch or one strong acceleration does not release Safe. A changed lead track restarts recovery confirmation; invalid or stale inputs do not count toward confirmation time.
+Acceleration spikes shorter than about 0.5 seconds do not release Safe. A changed lead track restarts acceleration and flow confirmation; invalid or stale inputs and lead loss reset acceleration confirmation.
 
 Manually changing the stored `MyDrivingMode` suspends automatic selection until the planner restarts. The displayed actual mode can differ from the stored choice during automatic operation.
 
@@ -103,7 +104,6 @@ Tune the speed band containing the symptom instead of changing the whole table. 
 | Setting | Stored-value interpretation | Direction when increased or moved toward zero |
 |---|---|---|
 | `StopDistanceCarrot` | `600` → 6.00 m | Increases fixed clearance to a stopped lead |
-| `StoppingAccel` | `-50` → -0.50 m/s² | Moving toward zero weakens the stopped-state brake target |
 | `VEgoStopping` | `50` → 0.50 m/s | Higher values enter stopping state at a higher planned speed |
 | `AChangeCostStarting` | MPC acceleration-change cost | Higher values smooth initial acceleration changes |
 
@@ -115,17 +115,24 @@ Range 400–1000 cm, step 10 cm. The code divides by 100 and uses it as the fixe
 
 It is therefore not the actual moving following distance. Its direct effect is clearest near zero speed behind a stopped lead. When there is no active `leadOne` but the camera model consistently associates a stationary vehicle with the E2E stop endpoint, the planner first corrects that endpoint toward the inferred vehicle position and then applies this fixed clearance. No SCC/radar object is created. Although the catalog description says “stop position ×0.8,” the running code does not apply 0.8.
 
-### `StoppingAccel`
+### Fixed stopping acceleration
 
-Range -100 to 0 in steps of 10, scaled by `0.01 m/s²`.
+Stopping acceleration is fixed at `-0.50 m/s²` (formerly stored as `-50`) for all brands and is no longer adjustable in settings. Existing `StoppingAccel` values, including `0` and other negative values, are ignored.
 
-- More negative: allows earlier stop-state entry and a stronger stopped brake target.
-- Closer to zero: weaker target.
-- Exactly `0`: Hyundai, Kia, and Genesis automatically save `-50` when vehicle control initializes after boot and use `-0.50 m/s²` from the first control update. Other brands use the vehicle's `CP.stopAccel`.
+This value sets the stop-entry acceleration threshold and the target used when gradually increasing braking in normal stopping state. Stronger braking already in progress is retained, and soft hold continues to use the vehicle-specific stationary-hold acceleration. This value does not directly control acceleration or braking when stock ACC is responsible.
 
-Existing negative values are preserved for Hyundai, Kia, and Genesis. If `0` is saved again later, it is restored to `-50` at the next vehicle-control initialization.
+### CANFD Stop Retry (Experimental) · `CanfdStopRetry`
 
-An excessively negative value can make final braking harsh.
+Available under Vehicle & Hardware → CANFD·HDA, with **OFF** as the default. Applies only to Hyundai/Kia CANFD with openpilot longitudinal control. Changes apply during driving within about 0.5 seconds without rebooting. Retry state resets only when switching ON or OFF; leaving the setting unchanged preserves an ongoing retry.
+
+- **OFF:** Retains existing stop requests, negative acceleration requests, InfoDisplay, and byte7 handling.
+- **ON:** Sends StopReq=1 with aReq=0 during low-speed stop requests and sets InfoDisplay and byte7 to zero. The lower band uses a fixed experimental value of 0.20 during stop requests, without copying stock SCC values.
+- If motion persists, releases StopReq, requests negative acceleration, then reasserts once. If the retry still fails, retains negative acceleration requests without repeated toggling. Driver pedal input, cruise disengagement, and interlocks such as Auto Hold cancel retries.
+
+The fixed stopping acceleration above still applies. When enabled, the CAN output stage substitutes zero acceleration during stop requests; recovery requests the stronger deceleration of the existing request and -0.50 m/s².
+
+> [!CAUTION]
+> Complete stopping and collision prevention have not been established across vehicles. Validate only in a controlled area where you can brake directly. Switch OFF to restore the previous method at the next settings refresh. Switching while stopped also changes the transmitted requests, so change it only when prepared to brake directly.
 
 ### `VEgoStopping`
 

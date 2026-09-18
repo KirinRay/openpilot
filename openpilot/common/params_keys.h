@@ -252,7 +252,6 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TurnSpeedControlMode", {PERSISTENT, INT, "1"}},
 
     {"MapTurnSpeedFactor", {PERSISTENT, INT, "90"}},
-    {"StoppingAccel", {PERSISTENT, INT, "-50"}},
     {"AutoSpeedUptoRoadSpeedLimit", {PERSISTENT, INT, "0"}},
     {"AutoRoadSpeedAdjust", {PERSISTENT, INT, "50"}},
 
@@ -312,6 +311,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsLdwsCar", {PERSISTENT, INT, "0"}},
     {"CanfdHDA2", {PERSISTENT, INT, "0"}},
     {"CanfdDebug", {PERSISTENT, INT, "0"}},
+    {"CanfdStopRetry", {PERSISTENT, BOOL, "0"}},
 
     {"SoundVolumeAdjust", {PERSISTENT, INT, "100"}},
     {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "10"}},
