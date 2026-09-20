@@ -47,12 +47,14 @@ from openpilot.selfdrive.carrot.radar_motion.primary import (
   RadarPointSnapshot,
   VisionLead,
   VisionRadarMatcher,
+  VisionRadarMatch,
   apply_vision_bracket_cutin_support,
   lead_from_radar_point,
   prefer_front_radar_kinematics,
   select_primary_radar_points,
   snapshot_live_radar_points,
   snapshot_radar_points,
+  vision_lead_from_model,
 )
 
 
@@ -1150,6 +1152,18 @@ def test_cutin_must_still_be_ahead_of_primary_at_path_entry_time() -> None:
     primary,
     projected_path_entry=True,
     entry_horizon_s=2.0,
+  )
+
+
+def test_current_overlap_does_not_make_a_farther_target_compete_with_primary() -> None:
+  primary = {"status": True, "dRel": 12.0, "vRel": -1.0}
+  assert not cutin_can_compete_with_primary(
+    {"status": True, "dRel": 21.0, "vRel": -2.0}, primary,
+    projected_path_entry=True, entry_horizon_s=0.0,
+  )
+  assert cutin_can_compete_with_primary(
+    {"status": True, "dRel": 6.0, "vRel": -2.0}, primary,
+    projected_path_entry=True, entry_horizon_s=0.0,
   )
 
 
@@ -3302,6 +3316,83 @@ def test_stationary_front_rejects_opposite_side_uncertain_vision_match() -> None
   assert matcher.stationary_identity is None
 
 
+@pytest.mark.parametrize("distance,vision_speed,corner,expected", (
+  (20.0, 8.5, False, False),
+  (20.0, 0.0, False, True),
+  (20.0, 8.5, True, True),
+  (20.0, 4.8, False, True),
+  (20.0, 4.8, True, True),
+  (90.0, 8.5, False, True),
+))
+def test_near_stationary_front_cannot_borrow_precise_moving_vision(
+  distance, vision_speed, corner, expected,
+) -> None:
+  matcher = VisionRadarMatcher()
+  matches = []
+  for index in range(20):
+    time_s = index * 0.05
+    d_rel = distance - 8.0 * time_s
+    points = [Point(33, d_rel, 0.0, v_rel=-8.0, source="frontRadar")]
+    if corner:
+      points.append(Point(1033, d_rel + 0.2, 0.1, v_rel=-8.0, source="corner235"))
+    snapshots = snapshot_radar_points(points, v_ego=8.0)
+    model = model_with_lead(d_rel + 0.5, 0.5, vision_speed, probability=0.99)
+    model.leadsV3[0].vStd = (0.8,)
+    matches.append(matcher.match(
+      model, snapshots[:1], STRAIGHT_PATH, time_s=time_s,
+      stationary_points=snapshots, prefer_primary_stationary=True,
+      yaw_rate_rad_s=0.04,
+    ))
+  assert (matches[-1] is not None) == expected
+  if not expected:
+    assert all(match is None for match in matches)
+
+
+def test_near_stationary_speed_conflict_revokes_pending_and_held_identity() -> None:
+  for seed_frames in (3, 10):
+    matcher = VisionRadarMatcher()
+    for index in range(seed_frames + 8):
+      time_s = index * 0.05
+      points = snapshot_radar_points(
+        (Point(33, 25.0 - 8.0 * time_s, 0.0, v_rel=-8.0),), v_ego=8.0,
+      )
+      conflict = index >= seed_frames
+      model = model_with_lead(points[0].d_rel, 0.0, 8.5 if conflict else 0.0, probability=0.99)
+      model.leadsV3[0].vStd = (0.8,)
+      match = matcher.match(
+        model, points, STRAIGHT_PATH, time_s=time_s,
+        stationary_points=points, prefer_primary_stationary=True,
+      )
+      if conflict:
+        assert match is None
+        assert matcher.stationary_identity is None
+        assert matcher._stationary_pending_identity is None
+      elif index == seed_frames - 1 and seed_frames == 10:
+        assert match is not None
+
+
+@pytest.mark.parametrize("mode", (1, 2, 3))
+def test_low_speed_moving_lead_does_not_seed_a_close_stationary_reflection(mode: int) -> None:
+  controller = DPathRadarController(enable_radar_tracks=mode, prefer_corner_radar=True)
+  for index in range(50):
+    time_s = index * 0.05
+    moving_distance = 9.8 + 0.5 * time_s
+    points = [Point(44, moving_distance, 0.5, v_rel=0.5, trackState=2)]
+    if index >= 20:
+      points.append(Point(43, 6.8 - 4.65 * (time_s - 1.0), 0.3,
+                          v_rel=-4.65, trackState=2))
+    model = model_with_lead(moving_distance - 0.5, 0.5, 4.8, probability=0.999)
+    model.leadsV3[0].xStd = (0.9,)
+    model.leadsV3[0].vStd = (0.4,)
+    output = controller.update(time_s=time_s, v_ego=4.65, radar_points=points, model=model)
+    if index >= 20:
+      assert output.lead_one is not None
+      assert output.lead_one["radarTrackId"] == 44
+      assert output.lead_two is None or output.lead_two["radarTrackId"] != 43
+      assert controller.primary_matcher.stationary_identity != ("frontRadar", 43)
+      assert controller.primary_matcher._stationary_pending_identity != ("frontRadar", 43)
+
+
 def test_stationary_front_rejects_offset_moving_vision_median_reflection() -> None:
   matcher = VisionRadarMatcher()
   for index in range(8):
@@ -3486,6 +3577,89 @@ def test_stationary_front_hands_off_to_persistent_closer_vision_match() -> None:
   assert matcher.stationary_identity == ("frontRadar", 46)
 
 
+def test_distinct_stopped_body_handoff_requires_sustained_better_vision_match() -> None:
+  matcher = VisionRadarMatcher()
+  held = Point(32, 20.0, -0.2, trackState=2)
+  for i in range(7):
+    points = snapshot_radar_points((held,), v_ego=0.0)
+    result = matcher.match(model_with_lead(20.0, -0.2, 0.0, probability=1.0), points, STRAIGHT_PATH,
+                           time_s=i * 0.05, stationary_points=points, prefer_primary_stationary=True)
+  assert result.point.track_id == 32
+  # Vision sits closer to the nearer body, with realistic range bias. Both
+  # returns still fit the broad stationary gate, and their gap exceeds 5 m.
+  selected = []
+  for i in range(13):
+    points = snapshot_radar_points((held, Point(52, 14.5, 0.2, trackState=2)), v_ego=0.0)
+    model = model_with_lead(16.1, 0.1, 0.0, probability=0.99)
+    model.leadsV3[0].xStd = (0.65,)
+    model.leadsV3[0].yStd = (0.25,)
+    result = matcher.match(model, points, STRAIGHT_PATH, time_s=0.35 + i * 0.05,
+                           stationary_points=points, prefer_primary_stationary=True)
+    selected.append(result.point.track_id)
+  assert selected[:10] == [32] * 10
+  assert selected[-1] == 52
+  assert matcher.stationary_identity == ("frontRadar", 52)
+
+
+@pytest.mark.parametrize("change", (
+  "no_vision", "weak_vision", "vision_on_held", "ambiguous_range", "range_error", "low_quality",
+  "low_match_score", "lateral", "off_path", "speed", "unmeasured", "unmeasured_challenger", "corner", "far_separation",
+  "new_id", "gap", "position_jump", "transient",
+))
+def test_distinct_stopped_body_cannot_replace_l1_without_clear_persistent_vision(change):
+  matcher = VisionRadarMatcher()
+  ready = []
+  for i in range(13):
+    held = Point(32, 20.0, -0.2, trackState=2)
+    closer = Point(52, 14.5, 0.2, trackState=2)
+    distance, probability, score, d_path = 16.1, 0.99, 0.05, 0.2
+    if change == "weak_vision":
+      probability = 0.89
+    elif change == "vision_on_held":
+      distance = 20.0
+    elif change == "ambiguous_range":
+      distance = 17.25
+    elif change == "range_error":
+      closer, distance = replace(closer, d_rel=11.0), 14.0
+    elif change == "low_quality":
+      closer = replace(closer, trackState=1)
+    elif change == "low_match_score":
+      score = 1e-6
+    elif change == "lateral":
+      closer = replace(closer, y_rel=1.3)
+    elif change == "off_path":
+      d_path = 1.1
+    elif change == "speed":
+      closer = replace(closer, v_rel=3.0)
+    elif change == "corner":
+      closer = replace(closer, source="corner235")
+    elif change == "far_separation":
+      closer, distance = replace(closer, d_rel=3.0), 4.0
+    elif change == "new_id":
+      closer = replace(closer, track_id=52 + i // 4)
+    elif change == "position_jump":
+      held = replace(held, d_rel=20.0 + 4.0 * (i % 2))
+      closer = replace(closer, d_rel=14.5 + 4.0 * (i % 2))
+      distance += 4.0 * (i % 2)
+    elif change == "transient" and i >= 9:
+      distance = 20.0
+    points = snapshot_radar_points((held, closer), v_ego=0.0)
+    vision = vision_lead_from_model(model_with_lead(distance, 0.1, 0.0, probability=probability))
+    if change == "no_vision":
+      vision = None
+    # The normal snapshot filter already excludes unmeasured returns.
+    if change == "unmeasured":
+      points = (replace(points[0], measured=False), points[1])
+    elif change == "unmeasured_challenger":
+      points = (points[0], replace(points[1], measured=False))
+    stationary = VisionRadarMatch(points[0], 0.99, 0.01, -0.2)
+    moving = VisionRadarMatch(points[1], 0.99, score, d_path)
+    ready.append(matcher._stationary_closer_handoff_ready(
+      stationary, moving, vision, i * (0.3 if change == "gap" else 0.05),
+    ))
+  assert not any(ready)
+
+
 def test_stationary_front_hands_off_to_offset_closer_vision_range() -> None:
   matcher = VisionRadarMatcher()
   match = None
@@ -3631,6 +3805,64 @@ def test_stationary_front_ignores_transient_closer_vision_match() -> None:
   assert retained is not None
   assert retained.point.track_id == 59
   assert matcher.stationary_identity == ("frontRadar", 59)
+
+
+def closer_stationary_sequence(samples):
+  """A central nearer body competes with the previously matched stopped car."""
+  matcher = VisionRadarMatcher()
+  for index in range(7):
+    points = snapshot_radar_points((Point(39, 6.0, 0.6),), v_ego=0.0)
+    matcher.match(model_with_lead(6.0, 0.6, 0.0, probability=1.0), points,
+                  STRAIGHT_PATH, time_s=index * 0.05, stationary_points=points,
+                  prefer_primary_stationary=True)
+  selected = []
+  for elapsed, vision_distance, change in samples:
+    held = Point(39, 6.0, 0.6)
+    challenger = Point(60, 3.5, 0.0)
+    if change == "new_id":
+      challenger = replace(challenger, track_id=61)
+    elif change == "lateral":
+      challenger = replace(challenger, y_rel=-1.3)
+    elif change == "moving":
+      challenger = replace(challenger, v_rel=3.0)
+    elif change == "unmeasured":
+      challenger = replace(challenger, measured=False)
+    elif change == "farther":
+      challenger = replace(challenger, d_rel=7.0)
+    points = snapshot_radar_points((held, challenger), v_ego=0.0)
+    model = model_with_lead(vision_distance, 0.0, 0.0,
+                            probability=0.85 if change == "weak_vision" else 1.0)
+    model.leadsV3[0].xStd = (0.5,)
+    model.leadsV3[0].yStd = (0.1,)
+    result = matcher.match(model, points, STRAIGHT_PATH, time_s=0.35 + elapsed,
+                           stationary_points=points, prefer_primary_stationary=True)
+    selected.append(result.point.track_id if result else None)
+  return selected
+
+
+def test_stationary_closer_handoff_finishes_after_bounded_cost_jitter():
+  # Six good samples fall just short of 250 ms. The next sample still favors
+  # the same nearer body, but its cost gain falls from 0.15 to 0.067.
+  samples = [(t, 5.2, "") for t in (0.0, 0.055, 0.100, 0.154, 0.206, 0.249894)]
+  samples += [(0.305, 5.45, ""), (0.355, 5.45, "")]
+  assert closer_stationary_sequence(samples) == [39] * 6 + [60] * 2
+
+
+@pytest.mark.parametrize("samples", (
+  [(i * 0.05, 5.45, "") for i in range(10)],
+  [(0.0, 5.2, "")] + [(i * 0.05, 5.45, "") for i in range(1, 10)],
+  [(i * 0.05, 5.2 if i % 2 == 0 else 5.45, "") for i in range(10)],
+))
+def test_stationary_closer_handoff_cannot_start_with_weak_cost_support(samples):
+  assert closer_stationary_sequence(samples) == [39] * len(samples)
+
+
+@pytest.mark.parametrize("change", ("new_id", "lateral", "moving", "unmeasured", "farther", "weak_vision", "gap", "cost_reversal"))
+def test_stationary_closer_handoff_jitter_hold_keeps_hard_vetoes(change):
+  samples = [(t, 5.2, "") for t in (0.0, 0.055, 0.100, 0.154, 0.206, 0.249894)]
+  samples.append((0.5 if change == "gap" else 0.305,
+                  5.8 if change == "cost_reversal" else 5.45, change))
+  assert closer_stationary_sequence(samples)[-1] != 60
 
 
 def test_stationary_front_radar_rejects_low_confidence_vision_seed() -> None:

@@ -11,6 +11,7 @@ from openpilot.cereal.messaging import PubMaster, SubMaster
 from msgq.visionipc import VisionIpcClient, VisionStreamType, VisionBuf
 from opendbc.car.car_helpers import get_demo_car_params
 from openpilot.common.swaglog import cloudlog
+from openpilot.common.runtime_diagnostics import RuntimeDiagnostics
 from openpilot.common.params import Params
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import config_realtime_process, DT_MDL
@@ -23,6 +24,7 @@ from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.compile_modeld import make_input_queues, WARP_INPUTS, POLICY_INPUTS
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_driving_model_data, fill_pose_msg, PublishState
 from openpilot.common.file_chunker import open_file_chunked
+from openpilot.selfdrive.modeld.camera_sync import FrameMeta, receive_camera_pair
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.helpers import (get_tg_input_devices, load_oob, modeld_pkl_path,
                                                 refresh_usbgpu_device_cache, select_vision_streams, usbgpu_compiled_path,
@@ -35,7 +37,7 @@ SIMULATION = os.getenv('SIMULATION') == '1'
 LAT_SMOOTH_SECONDS = 0.0
 LONG_SMOOTH_SECONDS = 0.3
 MIN_LAT_CONTROL_SPEED = 0.3
-USBGPU_MODEL_LOAD_TIMEOUT = 40
+USBGPU_MODEL_LOAD_TIMEOUT = 120
 USBGPU_DISCOVERY_GRACE_SECONDS = 5.0
 USBGPU_DISCOVERY_POLL_INTERVAL = 0.1
 USBGPU_INIT_ATTEMPTS = 6
@@ -116,16 +118,6 @@ def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.
                                 desiredAcceleration=float(desired_accel),
                                 shouldStop=bool(should_stop),
                                 desiredVelocity=float(desired_velocity_now))
-
-class FrameMeta:
-  frame_id: int = 0
-  timestamp_sof: int = 0
-  timestamp_eof: int = 0
-
-  def __init__(self, vipc=None):
-    if vipc is not None:
-      self.frame_id, self.timestamp_sof, self.timestamp_eof = vipc.frame_id, vipc.timestamp_sof, vipc.timestamp_eof
-
 
 class ModelState:
   prev_desire: np.ndarray  # for tracking the rising edge of the pulse
@@ -285,7 +277,11 @@ def main(demo=False):
       nonlocal usbgpu_model
       for attempt in range(1, USBGPU_INIT_ATTEMPTS + 1):
         try:
-          usbgpu_model = ModelState(vipc_client_main.width, vipc_client_main.height, True, usbgpu_pkl_path)
+          if usbgpu_pkl_path.name == 'model.pkl' and (usbgpu_pkl_path.parent / 'installed.json').is_file():
+            from openpilot.selfdrive.modeld.precompiled_runner import PrecompiledModelState
+            usbgpu_model = PrecompiledModelState(vipc_client_main.width, vipc_client_main.height, usbgpu_pkl_path)
+          else:
+            usbgpu_model = ModelState(vipc_client_main.width, vipc_client_main.height, True, usbgpu_pkl_path)
           return
         except Exception as exc:
           if usbgpu_pcie_not_ready(exc) and attempt < USBGPU_INIT_ATTEMPTS:
@@ -370,7 +366,9 @@ def main(demo=False):
   vEgoStopping = params.get_float("VEgoStopping") * 0.01
   camera_yaw_trim_deg = params.get_float("CameraYawTrimDeg") * 0.01
   lat_delay_dynamic = lat_smooth_seconds
+  diagnostics = RuntimeDiagnostics('modeld', cloudlog.event)
   while True:
+    loop_start, cpu_start = time.monotonic(), time.thread_time()
     frame += 1
     if frame % 100 == 0:
       custom_lat_delay = params.get_float("SteerActuatorDelay") * 0.01
@@ -386,38 +384,13 @@ def main(demo=False):
         params.put_bool_nonblocking("UsbGpuHardwareSeen", True)
       params.put_bool_nonblocking("UsbGpuCompiled", usbgpu_compiled_path() is not None)
 
-    # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
-    while meta_main.timestamp_sof < meta_extra.timestamp_sof + 25000000:
-      buf_main = vipc_client_main.recv()
-      meta_main = FrameMeta(vipc_client_main)
-      if buf_main is None:
-        break
-
-    if buf_main is None:
-      cloudlog.debug("vipc_client_main no frame")
+    frames = receive_camera_pair(vipc_client_main, vipc_client_extra if use_extra_client else None)
+    if frames is None:
+      cloudlog.debug("camera pair unavailable or out of sync")
       continue
+    buf_main, meta_main, buf_extra, meta_extra = frames
 
-    if use_extra_client:
-      # Keep receiving extra frames until frame id matches main camera
-      while True:
-        buf_extra = vipc_client_extra.recv()
-        meta_extra = FrameMeta(vipc_client_extra)
-        if buf_extra is None or meta_main.timestamp_sof < meta_extra.timestamp_sof + 25000000:
-          break
-
-      if buf_extra is None:
-        cloudlog.debug("vipc_client_extra no frame")
-        continue
-
-      if abs(meta_main.timestamp_sof - meta_extra.timestamp_sof) > 10000000:
-        cloudlog.error(f"frames out of sync! main: {meta_main.frame_id} ({meta_main.timestamp_sof / 1e9:.5f}),\
-                         extra: {meta_extra.frame_id} ({meta_extra.timestamp_sof / 1e9:.5f})")
-
-    else:
-      # Use single camera
-      buf_extra = buf_main
-      meta_extra = meta_main
-
+    camera_ready = time.monotonic()
     sm.update(0)
     desire = DH.desire
     is_rhd = sm["driverMonitoringState"].isRHD
@@ -457,7 +430,7 @@ def main(demo=False):
     frame_drop_ratio = frames_dropped / (1 + frames_dropped)
     prepare_only = vipc_dropped_frames > 0
     if prepare_only:
-      cloudlog.error(f"skipping model eval. Dropped {vipc_dropped_frames} frames")
+      cloudlog.error(f"camera dropped {vipc_dropped_frames} frames; advancing model history")
 
     bufs = {name: buf_extra if 'big' in name else buf_main for name in model.vision_input_names}
     transforms = {name: model_transform_extra if 'big' in name else model_transform_main for name in model.vision_input_names}
@@ -472,6 +445,8 @@ def main(demo=False):
     }
 
     mt1 = time.perf_counter()
+    camera_age_at_run_ms = (time.monotonic() - meta_main.timestamp_eof * 1e-9) * 1000
+    inference_cpu_start = time.thread_time()
     try:
       model_output = model.run(bufs, transforms, inputs, prepare_only)
     except Exception:
@@ -490,6 +465,7 @@ def main(demo=False):
       # misleading communication/CAN error while selfdrived waits for modeld.
       model_output = model.run(bufs, transforms, inputs, prepare_only)
     mt2 = time.perf_counter()
+    inference_cpu_ms = (time.thread_time() - inference_cpu_start) * 1000
     model_execution_time = mt2 - mt1
 
     if model_output is not None:
@@ -529,7 +505,8 @@ def main(demo=False):
       modelv2_send.modelV2.meta.distanceToRoadEdgeRight = float(DH.right.dist_to_edge)
       modelv2_send.modelV2.meta.desire = DH.desire
       modelv2_send.modelV2.meta.laneChangeProb = DH.lane_change_ll_prob
-      modelv2_send.modelV2.meta.modelTurnSpeed = float(DH.model_turn_speed)
+      # Retain the wire field for older log/replay readers; this limiter is retired.
+      modelv2_send.modelV2.meta.modelTurnSpeed = 200.0
       modelv2_send.modelV2.meta.laneChangeAvailableLeft = DH.lane_change_available_left
       modelv2_send.modelV2.meta.laneChangeAvailableRight = DH.lane_change_available_right
       mt3 = time.perf_counter()
@@ -550,6 +527,15 @@ def main(demo=False):
         usbgpu_startup_pending = False
         cloudlog.warning("eGPU first model output published; startup complete")
     last_vipc_frame_id = meta_main.frame_id
+    diagnostics.record(
+      context={'backend': type(model).__name__, 'usbgpu': model.usbgpu, 'frame_id': meta_main.frame_id},
+      camera_wait_ms=(camera_ready - loop_start) * 1000,
+      camera_age_at_run_ms=camera_age_at_run_ms,
+      inference_ms=model_execution_time * 1000, inference_thread_cpu_ms=inference_cpu_ms,
+      postprocess_ms=(time.perf_counter() - mt2) * 1000,
+      loop_ms=(time.monotonic() - loop_start) * 1000, thread_cpu_ms=(time.thread_time() - cpu_start) * 1000,
+      dropped_frames=vipc_dropped_frames, published=int(model_output is not None),
+    )
 
 
 if __name__ == "__main__":

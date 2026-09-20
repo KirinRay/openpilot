@@ -18,7 +18,7 @@ def source_version() -> str:
   digest = hashlib.sha256()
   roots = (replay.CARROT_ROOT / "radar_motion", replay.CARROT_ROOT / "cluster",
            replay.REPO_ROOT / "openpilot/selfdrive/controls/lib")
-  files = {Path(__file__), Path(replay.__file__)}
+  files = {Path(__file__), Path(replay.__file__), *replay._radar_input_sources()}
   for root in roots:
     files.update(root.glob("*.py"))
   files.update((replay.REPO_ROOT / "openpilot/cereal").glob("*.capnp"))
@@ -55,7 +55,7 @@ def export_frames(frames, *, sensor="auto", sensitivity=replay.VALIDATION_DEFAUL
     selected = selector.select(frame, index)
     selections.append(selected)
     selection = asdict(selected)
-    item["selection"] = {key: selection[key] for key in ("lead_one", "lead_two", "cutin_diagnostics", "cutin_predecel_candidate")}
+    item["selection"] = {key: selection[key] for key in ("lead_one", "lead_two", "cutin_diagnostics", "cutin_predecel_candidate", "lane_change_gap")}
     output.append(item)
   def runs(segments, color):
     return [{"color": "#%02x%02x%02x" % (color(segment[0][2]) if callable(color) else color),

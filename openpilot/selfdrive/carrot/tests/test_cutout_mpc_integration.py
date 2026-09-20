@@ -8,11 +8,13 @@ import numpy as np
 import pytest
 
 from openpilot.selfdrive.controls.lib.longitudinal_cutout import cutout_obstacle_relief
-from openpilot.selfdrive.controls.lib.longitudinal_preview import get_lead_accel_mpc_request
+from openpilot.selfdrive.controls.lib.longitudinal_gap_recovery import LeadGapState, gap_reference, displayed_follow_distance
+from openpilot.selfdrive.carrot.radar_motion.lane_change_gap import GapLead, LaneChangeGapPlan
+from openpilot.selfdrive.controls.lib.longitudinal_preview import LeadAccelResponseState, get_lead_accel_mpc_request
 from openpilot.selfdrive.carrot.traffic_stop import get_traffic_stop_distance_adjust, get_traffic_stop_obstacle_distance
 
 
-def run_update(*, confidence=0., mode="acc", reset=False, enabled=True, second_distance=100., stop_x=1000.):
+def run_update(*, confidence=0., mode="acc", reset=False, enabled=True, second_distance=100., stop_x=1000., lane_change=None, selected_status=True):
   path = Path(__file__).resolve().parents[2] / "controls/lib/longitudinal_mpc_lib/long_mpc.py"
   tree = ast.parse(path.read_text(encoding="utf-8"))
   mpc = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "LongitudinalMpc")
@@ -28,26 +30,48 @@ def run_update(*, confidence=0., mode="acc", reset=False, enabled=True, second_d
                    "SOURCES": ["lead0", "lead1", "cruise", "e2e"], "LEAD_DANGER_FACTOR": .8,
                    "A_CHANGE_COST_STARTING": 10., "COST_E_DIM": 5, "CRASH_DISTANCE": .25,
                    "LEAD_ACCEL_MIN_TRACK_FRAMES": 3,
+                   "gap_reference": gap_reference, "displayed_follow_distance": displayed_follow_distance,
                    "get_lead_accel_mpc_request": get_lead_accel_mpc_request,
                    "get_traffic_stop_distance_adjust": get_traffic_stop_distance_adjust,
                    "get_traffic_stop_obstacle_distance": get_traffic_stop_obstacle_distance,
-                   "cutout_obstacle_relief": cutout_obstacle_relief}
+                   "cutout_obstacle_relief": cutout_obstacle_relief, "LaneChangeGapPlan": LaneChangeGapPlan}
   exec(compile(ast.Module(body=helpers+methods, type_ignores=[]), str(path), "exec"), namespace)
-  lead = NS(status=True, radar=True, radarTrackId=50, dRel=25., vRel=-1., vLead=14.,
+  lead = NS(status=selected_status, radar=True, radarTrackId=50, dRel=25., vRel=-1., vLead=14.,
             aLeadK=-.5, aLeadTau=1.5, modelProb=.99, cutOutTime=1., cutOutConfidence=confidence)
   second = NS(**(vars(lead) | {"dRel": second_distance, "radarTrackId": 51, "cutOutConfidence": 0.}))
-  carrot = NS(comfort_brake=2.5, stop_distance=6., v_cruise=20., stop_dist=stop_x, mode=mode,
+  carrot = NS(comfort_brake=2.5, stop_distance=6., v_cruise=20., stop_dist=stop_x, mode=mode, myDrivingMode=3,
               trafficStopDistanceAdjust=0., trafficStopModelLeadOffset=0., leadAccelResponse=0,
-              get_T_FOLLOW=lambda *a, **kw:1.45, dynamic_t_follow=lambda tf,*a:tf)
-  self = NS(x0=np.array([0., 15., 0.]), source="lead0", mode=mode, max_a=1.5, cruise_min_a=-1.2,
+              get_T_FOLLOW=lambda *a, **kw:1.45, jerk_factor=1.)
+  if lane_change is not None:
+    carrot.lane_change_gap = lane_change
+    carrot.dynamicTFollowLC = .9
+  self = NS(dt=.05, lead_response_state=LeadAccelResponseState(), x0=np.array([0., 15., 0.]), source="lead0", mode=mode, max_a=1.5, cruise_min_a=-1.2,
+            lead_gap_states=(LeadGapState(), LeadGapState()), lead_gap_margins=np.zeros((13,2)),
             params=np.zeros((13,8)), prev_a=np.zeros(13), yref=np.zeros((13,6)),
             solver=NS(set=lambda *a:None), set_weights=lambda *a,**kw:None, crash_cnt=0,
             x_sol=np.column_stack([15.*times, np.full(13,15.), np.zeros(13)]), run=lambda:None)
-  self.process_lead=lambda l:(np.column_stack([l.dRel+l.vLead*times, np.full(13,l.vLead)]), l.vLead)
+  def process_lead(l):
+    distance, speed = (l.dRel, l.vLead) if l.status else (50., 25.)
+    return np.column_stack([distance + speed * times, np.full(13, speed)]), speed
+  self.process_lead = process_lead
   self.update_predicted_danger_margin=lambda *a:namespace["update_predicted_danger_margin"](self,*a)
   arrays=[np.zeros(13) for _ in range(4)]
   namespace["update"](self, carrot, reset, NS(leadOne=lead, leadTwo=second), 20., *arrays, cutout_relief_enabled=enabled)
   return self, times
+
+
+def test_lane_change_metadata_never_adds_a_braking_obstacle():
+  target = GapLead(70, 8., -3.5, -5., 10., -1.)
+  changed, _ = run_update(lane_change=LaneChangeGapPlan(True, 50, (target,)))
+  baseline, _ = run_update()
+  np.testing.assert_array_equal(changed.params, baseline.params)
+  assert changed.source == baseline.source
+
+
+def test_lane_change_never_stacks_old_cutout_relief():
+  baseline, _ = run_update(lane_change=LaneChangeGapPlan(active=True))
+  changed, _ = run_update(confidence=1., lane_change=LaneChangeGapPlan(active=True))
+  np.testing.assert_array_equal(changed.params, baseline.params)
 
 
 def test_acc_changes_only_post_clearance_obstacle_and_keeps_collision_diagnostics():
@@ -77,3 +101,18 @@ def test_planner_blocks_relief_on_override_or_stopping(gas, reset, force, stop, 
   assert eval(compile(ast.Expression(expression), str(path), "eval"), {
     "reset_state": reset, "sm": {"carState": NS(gasPressed=gas)}, "force_slow_decel": force,
     "self": NS(output_should_stop=stop)}) == expected
+
+
+@pytest.mark.parametrize("target", [
+  GapLead(54, .024222489, -5.1492157, -22.24, 4.962929, 0.),
+  GapLead(34, 12.730197, -5.1194372, -25.89, .2098045, 2.379832),
+  GapLead(32, 14.815691, -5.0282063, -25.91, .1125565, 1.579011),
+  GapLead(50, 13.482925, -5.2167411, -25.70, .0661392, 2.278994),
+])
+def test_recorded_roadside_returns_cannot_brake_without_selected_leads(target):
+  # Recorded incident values, including near-zero longitudinal range and
+  # stationary returns five metres to the right. Metadata cannot inject them.
+  actual, _ = run_update(selected_status=False, lane_change=LaneChangeGapPlan(active=True, targets=(target,)))
+  expected, _ = run_update(selected_status=False)
+  np.testing.assert_array_equal(actual.params, expected.params)
+  assert actual.source == expected.source == 'cruise'

@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import pytest
 
 from openpilot.cereal import log
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
@@ -6,6 +7,7 @@ from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 
 def make_car_state(left_blinker=False):
   return SimpleNamespace(
+    canValid=True,
     leftBlinker=left_blinker,
     rightBlinker=False,
     vEgo=20.0,
@@ -20,7 +22,6 @@ class TestDesireHelperDriverIntent:
   def setup_method(self):
     self.helper = DesireHelper()
     self.helper._update_params_periodic = lambda: None
-    self.helper._make_model_turn_speed = lambda model: None
     self.helper._process_sides = lambda car, model, radar: None
     self.helper._check_desire_state = lambda model, car, maneuver: None
     self.helper.laneChangeNeedTorque = 0
@@ -83,3 +84,26 @@ class TestDesireHelperDriverIntent:
     self.update()
 
     assert self.helper.lane_change_state == log.LaneChangeState.off
+
+  @pytest.mark.parametrize('block', ['inactive', 'can', 'speed', 'trailer'])
+  def test_bluetooth_lane_request_rejected_by_existing_gates(self, block):
+    state = make_car_state()
+    state.canValid = block != 'can'
+    state.vEgo = 0 if block == 'speed' else 20
+    state.trailerConnected = block == 'trailer'
+    self.carrot_man.atcType = ''
+    seen = []
+    self.helper.bluetooth_commands = SimpleNamespace(read=lambda allowed: seen.append(allowed))
+    self.helper.update(state, SimpleNamespace(), block != 'inactive', .1, self.carrot_man, SimpleNamespace())
+    assert seen == [False]
+    assert self.helper.lane_change_state == log.LaneChangeState.off
+
+  def test_bluetooth_lane_request_does_not_skip_blindspot(self):
+    self.carrot_man.atcType = ''
+    self.helper.laneChangeBsd = 1
+    self.helper.left.bsd_hold_counter = 10
+    self.helper.left.lane_change_available = False
+    self.helper.bluetooth_commands = SimpleNamespace(read=lambda allowed: 'laneLeft' if allowed else None)
+    self.update()
+    self.update()
+    assert self.helper.lane_change_state != log.LaneChangeState.laneChangeStarting

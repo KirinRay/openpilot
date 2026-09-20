@@ -21,6 +21,23 @@ env:
   CI: 1
 
 jobs:
+  git_update:
+    name: Git update lifecycle
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pytest aiohttp
+      - name: Check startup, locking, recovery and subprocess cleanup
+        run: |
+          bash -n launch_chffrplus.sh
+          python -m pytest -c /dev/null --rootdir=. --confcutdir=openpilot/common/tests openpilot/common/tests/test_repo_update.py
+          python -m pytest -c /dev/null --rootdir=. --confcutdir=openpilot/selfdrive/carrot/server/tests openpilot/selfdrive/carrot/server/tests/test_auto_update.py openpilot/selfdrive/carrot/server/tests/test_git_config.py
+          python -m pytest -c /dev/null --rootdir=. --confcutdir=openpilot/system/tests openpilot/system/tests/test_launch_order.py
+          python -m pytest -c /dev/null --rootdir=. --confcutdir=openpilot/system/updated/tests openpilot/system/updated/tests/test_process.py
+
   build_release:
     name: build release
     runs-on: ubuntu-24.04
@@ -31,3 +48,27 @@ jobs:
       - run: ./tools/op.sh setup
       - name: Build openpilot
         run: scons
+      - name: Check model, monitoring and Bluetooth integration
+        run: |
+          python -m pytest -o addopts='' -q \
+            openpilot/selfdrive/monitoring/test_monitoring.py \
+            openpilot/selfdrive/modeld/tests/test_big_model.py \
+            openpilot/selfdrive/modeld/tests/test_precompiled_model.py \
+            openpilot/selfdrive/modeld/tests/test_precompiled_runner.py \
+            openpilot/selfdrive/modeld/tests/test_generic_model_runtime.py \
+            openpilot/selfdrive/modeld/tests/test_dmonitoring_artifact.py \
+            openpilot/selfdrive/modeld/tests/test_camera_sync.py \
+            openpilot/selfdrive/carrot/bluetooth/tests \
+            openpilot/selfdrive/car/tests/test_carrot_cruise_buttons.py \
+            openpilot/selfdrive/controls/tests/test_desire_helper.py \
+            openpilot/system/tests/test_c3_agnos_manifest.py
+
+  model_web:
+    name: Model and Bluetooth web controls
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: node --test openpilot/selfdrive/carrot/web/tests/bluetooth_mapping.test.mjs openpilot/selfdrive/carrot/web/tests/egpu_model.test.mjs

@@ -92,10 +92,19 @@ def load_oob(f):
       if prev is not None:
         prev.release()
       buf = bytearray(struct.unpack('<q', h)[0])
-      f.readinto(buf)
+      if f.readinto(buf) != len(buf):
+        raise EOFError("incomplete model buffer")
       prev = pickle.PickleBuffer(buf)
       yield prev
   return pickle.load(io.BytesIO(opcodes), buffers=buffers())
+
+
+def validate_model_file(path: str | Path) -> None:
+  with open(path, "rb") as f:
+    load_oob(f)
+    if f.read(1):
+      raise ValueError("unexpected model buffer data")
+
 
 def usb_device_present(usb_ids: Collection[tuple[int, int]], min_speed_mbps: int = 0) -> bool:
   for d in Path("/sys/bus/usb/devices").glob("*"):
@@ -171,6 +180,11 @@ def active_usbgpu_compiled_path() -> Path | None:
   model = active_manifest()
   if model is None:
     return None
+  from openpilot.selfdrive.modeld.precompiled_model import installed
+  if (precompiled := installed(model)) is not None:
+    return precompiled
+  if model.precompiled_only:
+    return None
   path = modeld_pkl_path(usbgpu=True, model_sha256=model.sha256)
   return path if Path(get_manifest_path(path)).is_file() else None
 
@@ -178,6 +192,9 @@ def active_usbgpu_compiled_path() -> Path | None:
 def usbgpu_compile_pending() -> bool:
   model = active_manifest()
   if model is None:
+    return False
+  from openpilot.selfdrive.modeld.precompiled_model import installed
+  if installed(model) is not None:
     return False
   path = modeld_pkl_path(usbgpu=True, model_sha256=model.sha256)
   return not Path(get_manifest_path(path)).is_file()
@@ -187,6 +204,9 @@ def usbgpu_compiled_path() -> Path | None:
   if (path := active_usbgpu_compiled_path()) is not None:
     return path
 
+  current = active_manifest()
+  if current is not None and current.precompiled_only:
+    return None
   previous = read_state()['previous']
   if previous is not None:
     path = modeld_pkl_path(usbgpu=True, model_sha256=previous.sha256)

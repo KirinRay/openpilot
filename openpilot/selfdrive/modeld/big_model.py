@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download and select the optional Carrot USB-eGPU driving model.
 
-The large ONNX is deliberately kept outside the git checkout.  A small remote
+The large model artifact is deliberately kept outside the git checkout.  A small remote
 manifest selects the model, while verified files live on persistent device
 storage across source updates.
 """
@@ -27,13 +27,13 @@ from urllib.request import Request, urlopen
 from openpilot.selfdrive.modeld.big_model_status import BigModelStatusReporter
 
 
-DEFAULT_MANIFEST_URL = "https://upload.shind0.synology.me/models/comma4-big-tgc/manifest.json"
-TGC_MODEL = {
-  "model_id": "comma-pr38739-tgc-a2e422ee-1791d594",
-  "filename": "big_driving_supercombo.onnx",
-  "size": 765_950_064,
-  "sha256": "1791d5940b2c048d0639813426dd2cf1d6f2a6727ed51e17c8bcea8bbe754123",
-  "url": "https://upload.shind0.synology.me/models/comma4-big-tgc/big_driving_supercombo.onnx",
+DEFAULT_MANIFEST_URL = "https://upload.shind0.synology.me/models/comma4-big-cinque-v3/manifest.json"
+CINQUE_V3_MODEL = {
+  "model_id": "comma-pr38932-cinque-v3-892fc3a1-e758b96d",
+  "filename": "big_driving_tinygrad.pkl",
+  "size": 776_634_338,
+  "sha256": "e758b96df27858ea97122d18554930d04f9f8bda417417074edfb3a72b008d0b",
+  "url": "https://upload.shind0.synology.me/models/comma4-big-cinque-v3/big_driving_tinygrad.pkl",
 }
 MAX_MANIFEST_SIZE = 64 * 1024
 MAX_MODEL_SIZE = 4 * 1024 * 1024 * 1024
@@ -64,7 +64,7 @@ class BigModelManifest:
     model_url = value.get("url")
     if not isinstance(model_id, str) or not MODEL_NAME_RE.fullmatch(model_id):
       raise ValueError("invalid model_id")
-    if not isinstance(filename, str) or not MODEL_NAME_RE.fullmatch(filename) or not filename.endswith(".onnx"):
+    if not isinstance(filename, str) or not MODEL_NAME_RE.fullmatch(filename) or not filename.endswith((".onnx", ".pkl")):
       raise ValueError("invalid model filename")
     if not isinstance(size, int) or isinstance(size, bool) or not 0 < size <= MAX_MODEL_SIZE:
       raise ValueError("invalid model size")
@@ -80,7 +80,11 @@ class BigModelManifest:
 
   @property
   def cache_filename(self) -> str:
-    return f"{Path(self.filename).stem}-{self.sha256[:16]}.onnx"
+    return f"{Path(self.filename).stem}-{self.sha256[:16]}{Path(self.filename).suffix}"
+
+  @property
+  def precompiled_only(self) -> bool:
+    return self.filename.endswith(".pkl")
 
 
 def model_cache_dir() -> Path:
@@ -137,11 +141,12 @@ def _write_state(active: BigModelManifest, previous: BigModelManifest | None, ca
 
 
 def fetch_manifest(manifest_url: str = DEFAULT_MANIFEST_URL, timeout: float = 15.0) -> BigModelManifest:
-  # carrot-tgc intentionally pins commaai/openpilot#38739 (TGC). Keep the
-  # environment/CLI override path below so a different manifest can still be
-  # tested explicitly without changing this branch.
+  # Pin Cinque v3 from commaai/openpilot#38932 at 892fc3a1 on this branch.
+  # Upstream publishes only a generic precompiled PKL for this checkpoint.
+  # Keep the environment/CLI override path below so a different manifest can
+  # still be tested explicitly without changing this branch.
   if manifest_url == DEFAULT_MANIFEST_URL:
-    return BigModelManifest.from_dict(TGC_MODEL, manifest_url)
+    return BigModelManifest.from_dict(CINQUE_V3_MODEL, manifest_url)
 
   req = Request(manifest_url, headers={"Accept": "application/json", "User-Agent": "carrot-modeld/1"})
   with urlopen(req, timeout=timeout) as response:
@@ -291,7 +296,13 @@ def active_model_path(cache_dir: Path | None = None) -> Path | None:
 
 
 def active_model_compiled() -> bool:
-  if active_model_path() is None:
+  manifest = active_manifest()
+  if manifest is None:
+    return False
+  from openpilot.selfdrive.modeld.precompiled_model import installed
+  if installed() is not None:
+    return True
+  if manifest.precompiled_only:
     return False
   from openpilot.common.file_chunker import get_manifest_path
   from openpilot.selfdrive.modeld.helpers import modeld_pkl_path

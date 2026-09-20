@@ -1,5 +1,23 @@
 # Repository memory
 
+- As of 2026-09-20, the user requested deletion of the remote `carrot-worldmodel`
+  branch to prevent others from installing an unfinished experiment. Keep this
+  experiment local only; do not recreate or push its remote branch unless the
+  user explicitly authorizes publication again. Continue applying common
+  `carrot-wip` changes locally while preserving World Model-specific artifacts
+  and runtime work. Only `carrot-wip` must be pushed for shared changes; this
+  exception does not restore any retired branch. World Model has passed isolated
+  synthetic inference, but vehicle control integration remains unvalidated.
+
+- As of 2026-09-19, the user requests full integration of `carrot-cinque_v3` into
+  `carrot-wip`, including the pinned Cinque v3 eGPU model/runtime, AGNOS
+  `19.8-carrot-bt1`, and Bluetooth remote features. This supersedes the earlier
+  Cinque v2/OS separation below. Keep the internal-GPU driving model unchanged;
+  driver monitoring uses official Super Leicht (#38942). After successful
+  integration the user explicitly retired `carrot-cinque_v3`; `carrot-wip` is
+  the sole maintained top-level `carrot-*` branch. Do not recreate v3 or push
+  changes to its detached worktree. Its complete history is merged into wip.
+
 - Whenever radar detection or lead-selection code changes, update the NAS Carrot Routes
   radar replay service in the same task. The `Carrot Routes image` GitHub workflow builds
   committed shared code using `tools/carrot_route_vault/build_bundle.py`; the NAS scheduled
@@ -14,18 +32,24 @@
 - For long-running work, treat user questions, status checks, clarifications, and added in-scope
   requests as interruptions to answer while continuing the active work. Stop an active process or
   abandon the task only when the user explicitly asks to stop, cancel, pause, or replace it.
-- Every non-model change must be applied to `carrot-wip`, `carrot-cinque-terre`, and
-  `carrot-bmr_v6` and pushed to all three remote branches. Preserve each branch's model-specific
-  changes while integrating the complete `carrot-wip` history into both model branches, and verify
-  that none of the three branches has an unpushed commit before reporting the work complete.
-  Keep shared UI, model-name display helpers, and generated web assets identical across all three
-  branches; differences must be limited to model selection/artifacts, required model-specific
-  compatibility changes, and their tests.
-- When adding a model for testing, create a new experimental branch from the current `carrot-wip`.
-  Apply the same shared-code synchronization rule to the new model branch. Add any model-name
-  display support to the common code and generated web assets on every maintained branch.
-  A branch explicitly designated for a separate feature experiment may differ for that experiment;
-  the three current branches listed above remain model variants with otherwise identical features.
+- Apply model selection/artifacts, model and branch names, required model compatibility changes,
+  and branch-specific features (such as YOLO2) only to their relevant branches. Preserve these
+  differences when synchronizing shared code; do not spread an experiment to other branches.
+  The user will explicitly identify new feature experiments and their target branches.
+- As of 2026-09-13, `carrot-wip` is the sole maintained top-level `carrot-*` branch.
+  It incorporates the complete `carrot-cinque_v2` history. Its former Cinque v2
+  selection was superseded by the 2026-09-19 integration above.
+  Commit and push common changes, including radar processing and Carrot Web, to `carrot-wip`;
+  verify it matches `origin/carrot-wip` with no unpushed commits before completion.
+  Do not recreate retired branches or synchronize changes to their archive tags or detached
+  worktrees. Retired local branch tips are preserved under `archive/2026-09-13/<branch>`.
+  Namespaced contributor branches such as `thftgr/carrot-*` are outside this consolidation.
+- Create new model or feature experiment branches from current `carrot-wip` only when the user
+  explicitly requests them. Keep their model selections, generated display assets, compatibility
+  changes and dedicated features scoped to those experiments; agree their maintenance scope
+  with the user instead of automatically restoring the retired multi-branch synchronization rule.
+- The 2026-09-17 exception maintaining `carrot-cinque_v3` separately ended on
+  2026-09-19 after its complete integration and the user's explicit deletion request.
 - On this Windows workstation, vehicle tmux session captures are stored under
   `\\DS1821P\openpilot\<branch>`. When tmux is mentioned, search the directory for the known
   branch for a vehicle folder whose name ends with the exact dongle ID. If the branch is unknown,
@@ -117,6 +141,10 @@
 - `docs/user/docs_map.json` and `tools/docs/check_user_docs.py` are validation aids, not instructions
   to generate documentation. For an ordinary code pull request without explicitly requested docs,
   record a concrete `Docs-Not-Needed: <reason>` in the PR body when the workflow requires it.
+  For direct pushes, put the reason in each affected commit message; it only exempts that
+  commit. Settings-related rules remain required; other mapped changes produce review advice
+  and do not authorize unsolicited guide edits. Settings behavior changes still require the
+  relevant Korean/English guides and Wiki explanations, even when outside mapped paths.
 - Do not place private, internal-only, credential-bearing, or non-public feature documentation in
   `docs/user/` or link it from the public Wiki.
 
