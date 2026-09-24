@@ -163,8 +163,6 @@ class VCruiseCarrot:
     self.frame = 0
     self.params_memory = Params("/dev/shm/params")
     self.params = Params()
-    from openpilot.selfdrive.controls.lib.drive_helpers import is_volkswagen_meb
-    self.is_vw_meb = is_volkswagen_meb(CP)
     self.v_cruise_kph = 20 #V_CRUISE_UNSET
     self.v_cruise_cluster_kph = 20 #V_CRUISE_UNSET
     self.v_cruise_kph_last = 20
@@ -323,15 +321,6 @@ class VCruiseCarrot:
     self._add_log("")
     self.update_params(is_metric)
     self.frame += 1
-    # MEB(ID.4): SET/RESUME으로 (재)인게이지하면 상시조향도 복구.
-    # TA 버튼 등으로 조향만 꺼진 뒤 SET 재인게이지 시 롱컨만 살고 조향이 죽는 문제 방지
-    # (가감속 버튼 핸들러는 이미 _lat_enabled를 켜지만 setCruise는 핸들러가 없음).
-    if self.is_vw_meb and not self._lat_enabled:
-      for be in CS.buttonEvents:
-        if be.pressed and be.type in (ButtonType.setCruise, ButtonType.resumeCruise):
-          self._lat_enabled = True
-          self._add_log("Lateral enabled (set/resume engage)")
-          break
     if CS.gearShifter != GearShifter.drive:
       self.autoCruiseControl_cancel_timer = 20 * 100  # 20 sec
     else:
@@ -514,6 +503,12 @@ class VCruiseCarrot:
           button_type = bt
         #self.button_cnt %= self.button_long_time
 
+    # Dedicated SET/RES are one-shot actions on release, even after a long hold.
+    # They do not borrow +/- timers or their speed-step/swipe behavior.
+    if button_type != ButtonType.cancel:
+      for b in buttonEvents:
+        if not b.pressed and b.type in (ButtonType.setCruise, ButtonType.resumeCruise):
+          return button_kph, b.type, False
     return button_kph, button_type, self.long_pressed
 
   @staticmethod
@@ -570,7 +565,7 @@ class VCruiseCarrot:
 
     v_cruise_kph, button_type, long_pressed = self._carrot_command(v_cruise_kph, button_type, long_pressed)
 
-    if button_type in [ButtonType.accelCruise, ButtonType.decelCruise]:
+    if button_type in [ButtonType.accelCruise, ButtonType.decelCruise, ButtonType.setCruise, ButtonType.resumeCruise]:
       self._paddle_decel_active = False
       if self.autoCruiseControl_cancel_timer > 0:
         self._add_log(f"AutoCruiseControl cancel timer RESET {button_type}")
@@ -580,7 +575,22 @@ class VCruiseCarrot:
         self._cruise_cancel_state = False
 
     if not long_pressed:
-      if button_type == ButtonType.accelCruise:
+      if button_type in (ButtonType.setCruise, ButtonType.resumeCruise):
+        self._lat_enabled = True
+        self._soft_hold_active = 0
+        self._cruise_ready = False
+        self.carrot_cruise_active = False
+        self._pause_auto_speed_up = button_type == ButtonType.setCruise
+        if button_type == ButtonType.setCruise:
+          v_cruise_kph = self._current_speed_for_initial_resume()
+        elif self._v_cruise_kph_at_brake > 0:
+          v_cruise_kph = self._v_cruise_kph_at_brake
+        elif not self._cruise_speed_initialized:
+          v_cruise_kph = self._current_speed_for_initial_resume()
+        self._v_cruise_kph_at_brake = 0
+        self._cruise_speed_initialized = True
+
+      elif button_type == ButtonType.accelCruise:
         self._lat_enabled = True
         self._pause_auto_speed_up = False
         if self._soft_hold_active > 0:
@@ -707,7 +717,11 @@ class VCruiseCarrot:
       if not CC.enabled:
         self._cruise_control(1, -1, "Cruise on (paddle decel)")
 
-    v_cruise_kph = self._update_cruise_state(CS, CC, v_cruise_kph)
+    updated_speed = self._update_cruise_state(CS, CC, v_cruise_kph)
+    # Keep automatic engagement/disengagement checks, but let an explicit SET/RES
+    # own the speed selected on this frame (e.g. simultaneous pedal release).
+    if button_type not in (ButtonType.setCruise, ButtonType.resumeCruise):
+      v_cruise_kph = updated_speed
     if remote in ('cancel', 'cancelLong'):
       self._cruise_control(BLUETOOTH_CANCEL, -1, 'Cruise off (Bluetooth cancel)', allow_cancel_state=True, manual=True)
     elif remote_enable and not CS.brakePressed and not CS.gasPressed and self._activate_cruise >= 0:

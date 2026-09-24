@@ -326,6 +326,7 @@
               "zh": "停车与再起步",
               "params": [
                 "StopDistanceCarrot",
+                "StoppingAccel",
                 "VEgoStopping",
                 "AChangeCostStarting"
               ]
@@ -403,7 +404,6 @@
           "params": [
             "CanfdHDA2",
             "CanfdDebug",
-            "CanfdStopRetry",
             "HDPuse"
           ]
         },
@@ -414,6 +414,7 @@
           "zh": "雷达",
           "params": [
             "EnableRadarTracks",
+            "RadarTrackFlip",
             "EnableCornerRadar"
           ]
         },
@@ -526,7 +527,6 @@
               "zh": "画面·摄像头",
               "params": [
                 "ClusterHudEncoder",
-                "ClusterHudLiveFps",
                 "ClusterHudScreenMode",
                 "ClusterHudPanelLayout",
                 "ClusterHudCameraViewMode"
@@ -549,8 +549,6 @@
               "en": "Performance & Debug",
               "zh": "性能·调试",
               "params": [
-                "ClusterHudCoreMode",
-                "ClusterHudPriority",
                 "ClusterHudDebug"
               ]
             }
@@ -2576,13 +2574,13 @@
       "group": "시작",
       "name": "HyundaiCameraSCC",
       "title": "HYUNDAI: CAMERA SCC",
-      "descr": "1:롱컨차량\n 2:크루즈 상태 동기화\n 3:순정크루즈(CANFD롱컨배선)",
+      "descr": "1:롱컨차량\n 2:크루즈 상태 동기화\n 3:순정크루즈(CANFD롱컨배선)\n꺼짐 상태에서 카메라 버스 SCC가 감지되면 CAN 오류 시 설정 활성화를 안내합니다. 이미 카메라 SCC가 적용된 차종은 제외합니다.",
       "egroup": "START",
       "etitle": "HYUNDAI: CAMERA SCC(0)",
-      "edescr": "1: Long-con Vehicle, 2: Cruise State Sync (CAN-FD Vehicle), 3: Stock Cruise (CANFD Long harness)",
+      "edescr": "1: Long-con Vehicle, 2: Cruise State Sync (CAN-FD Vehicle), 3: Stock Cruise (CANFD Long harness)\nWhen off, SCC detected on the camera bus prompts you to enable this setting during a CAN error. Vehicles already configured for camera SCC are excluded.",
       "cgroup": "启动设置",
       "ctitle": "现代: 摄像头 SCC (0)",
-      "cdescr": "1: 纵向控制车辆, 2: 巡航状态同步 (CAN-FD 车辆), 3: 原厂巡航 (CANFD 纵向线束)",
+      "cdescr": "1: 纵向控制车辆, 2: 巡航状态同步 (CAN-FD 车辆), 3: 原厂巡航 (CANFD 纵向线束)\n关闭时，若在摄像头总线上检测到 SCC，发生 CAN 错误时会提示启用此设置。已配置摄像头 SCC 的车型除外。",
       "min": 0,
       "max": 3,
       "default": 0,
@@ -2640,24 +2638,6 @@
     },
     {
       "group": "시작",
-      "name": "CanfdStopRetry",
-      "title": "CANFD 정지 재시도 (시험)",
-      "descr": "기본 OFF. 현대·기아 CANFD 오픈파일럿 종방향 제어용 시험 기능입니다. OFF는 기존 정지 동작, ON은 순정형 정지 요청 후 움직임이 지속되면 감속·재요청합니다. 차종별 완전 정지는 검증되지 않았습니다. 변경은 주행 중에도 약 0.5초 이내 반영됩니다. 전환 시 정지 요청 방식이 바뀝니다.",
-      "egroup": "START",
-      "etitle": "CANFD Stop Retry (Experimental)",
-      "edescr": "Default OFF. Experimental stopping for Hyundai/Kia CANFD with openpilot longitudinal control. OFF retains existing stopping; ON sends stock-like stop requests and retries with deceleration if motion persists. Complete stopping is not validated across vehicles. Changes apply during driving within about 0.5 seconds, switching the stop-request method.",
-      "cgroup": "启动设置",
-      "ctitle": "CANFD 停车重试（试验）",
-      "cdescr": "默认关闭。用于现代/起亚 CANFD 的 openpilot 纵向控制试验功能。关闭时保留原有停车控制；开启后发送类似原厂的停车请求，若持续移动则减速并重试。尚未验证所有车型均能完全停车。行驶中更改也会在约 0.5 秒内生效，并切换停车请求方式。",
-      "min": 0,
-      "max": 1,
-      "default": 0,
-      "unit": 1,
-      "control": "toggle",
-      "risk": "high"
-    },
-    {
-      "group": "시작",
       "name": "CanfdDebug",
       "title": "CANFD Debug(0)",
       "descr": "",
@@ -2687,6 +2667,29 @@
       "max": 3,
       "default": 0,
       "unit": 1
+    },
+    {
+      "group": "레이더설정",
+      "name": "RadarTrackFlip",
+      "title": "레이더 좌우 반전",
+      "descr": "전방 레이더 트랙의 좌우 방향을 보정합니다.\n0: 정상(기본값)\n1: 좌우 위치와 횡속도 반전\nSCC·코너레이더·비전에는 적용하지 않습니다. 선행차 선택과 레이더 표시 모두에 적용됩니다. 차종별 자동 반전은 없으며, 실제 좌우 불일치를 확인한 차량에서만 선택하세요. 변경 후 차량을 재시동하거나 기기를 재부팅하세요.",
+      "egroup": "RADAR",
+      "etitle": "Radar Left/Right Inversion",
+      "edescr": "Corrects the lateral orientation of front radar tracks.\n0: Normal (default)\n1: Invert lateral position and velocity\nDoes not apply to SCC, corner radar or vision. Affects both lead selection and radar display. No vehicle is inverted automatically; select only after confirming a left/right mismatch. Restart the vehicle or reboot the device after changing this setting.",
+      "cgroup": "雷达设置",
+      "ctitle": "雷达左右反转",
+      "cdescr": "校正前雷达轨迹的左右方向。\n0：正常（默认）\n1：反转横向位置和横向速度\n不适用于 SCC、角雷达或视觉。同时影响前车选择和雷达显示。不按车型自动反转；仅在确认左右不一致后选择。更改后请重新启动车辆或设备。",
+      "min": 0,
+      "max": 1,
+      "default": 0,
+      "unit": 1,
+      "control": "select",
+      "options": {
+        "ko": ["정상", "좌우 반전"],
+        "en": ["Normal", "Invert left/right"],
+        "zh": ["正常", "左右反转"]
+      },
+      "risk": "high"
     },
     {
       "group": "레이더설정",
@@ -3236,6 +3239,22 @@
       "display_unit": "speedKph"
     },
     {
+      "group": "주행튜닝",
+      "name": "StoppingAccel",
+      "title": "정지시작가속도x0.01(-50)",
+      "descr": "정지 제어 진입 가속도와 정지 감속 목표를 조정합니다. -100~-50만 설정할 수 있으며 -50은 -0.50m/s²입니다. 더 음수일수록 감속 목표가 강해집니다. 이미 더 강한 감속은 유지하며, 소프트홀드는 차종별 정지 유지 가속도를 사용합니다. 변경은 주행 중에도 약 1초 안에 반영됩니다.",
+      "egroup": "LONG",
+      "etitle": "StoppingStartAccelx0.01(-50)",
+      "edescr": "Adjust the stop-entry acceleration threshold and stopping target. Only -100 to -50 is allowed; -50 means -0.50 m/s². More negative values request stronger deceleration. Existing stronger braking is retained, and soft hold uses the vehicle-specific hold acceleration. Changes apply within about one second, including while driving.",
+      "cgroup": "纵向控制",
+      "ctitle": "停止起步加速度 x0.01(-50)",
+      "cdescr": "调整停止控制的加速度进入阈值和减速目标。仅可设置-100至-50；-50代表-0.50m/s²。数值越负，减速目标越强。已有更强的制动请求保持不变，软保持使用车型的停车保持加速度。修改约一秒内生效，行驶中也适用。",
+      "min": -100,
+      "max": -50,
+      "default": -50,
+      "unit": 10
+    },
+    {
       "group": "가속설정",
       "name": "MyDrivingMode",
       "title": "드라이브모드:(3)",
@@ -3646,13 +3665,13 @@
       "group": "외부 HUD",
       "name": "ClusterHud",
       "title": "외부 HUD 활성화(0)",
-      "descr": "0: 끄기\n1: TURZX 9.2인치",
+      "descr": "0: 끄기\n1: TURZX 9.2인치\nUSB 출력은 10 FPS로 고정되며 eGPU 활성 시 5 FPS로 전환됩니다. CPU 배치와 우선순위는 자동 관리합니다.",
       "egroup": "CLUSTER HUD",
       "etitle": "External HUD Display(0)",
-      "edescr": "0: Off\n1: TURZX 9.2 inch",
+      "edescr": "0: Off\n1: TURZX 9.2 inch\nUSB output is fixed at 10 FPS, switching to 5 FPS while the eGPU is active. CPU placement and priority are managed automatically.",
       "cgroup": "外部 HUD",
       "ctitle": "外部 HUD 显示(0)",
-      "cdescr": "0: 关闭\n1: TURZX 9.2 英寸",
+      "cdescr": "0: 关闭\n1: TURZX 9.2 英寸\nUSB 输出固定为 10 FPS，eGPU 启用时切换为 5 FPS。CPU 分配和优先级自动管理。",
       "min": 0,
       "max": 1,
       "default": 0,
@@ -3879,22 +3898,6 @@
     },
     {
       "group": "외부 HUD",
-      "name": "ClusterHudLiveFps",
-      "title": "외부 HUD 라이브 FPS 제한(1)",
-      "descr": "0: 무제한(진단용)\n1: 10 FPS(기본)\n2: 20 FPS\n3: 30 FPS\n4: 40 FPS\n5: 50 FPS\n6: 60 FPS",
-      "egroup": "CLUSTER HUD",
-      "etitle": "External HUD Live FPS Limit(1)",
-      "edescr": "0: Uncapped (diagnostic)\n1: 10 FPS (default)\n2: 20 FPS\n3: 30 FPS\n4: 40 FPS\n5: 50 FPS\n6: 60 FPS",
-      "cgroup": "外部 HUD",
-      "ctitle": "外部 HUD 实时 FPS 限制(1)",
-      "cdescr": "0: Uncapped (diagnostic)\n1: 10 FPS (default)\n2: 20 FPS\n3: 30 FPS\n4: 40 FPS\n5: 50 FPS\n6: 60 FPS",
-      "min": 0,
-      "max": 6,
-      "default": 1,
-      "unit": 1
-    },
-    {
-      "group": "외부 HUD",
       "name": "ClusterHudScreenMode",
       "title": "외부 HUD 화면 모드(0)",
       "descr": "-1: 3D 전체화면\n0: 기본(내비/주행 리포트)\n1: 디버그\n2: 디버그(시스템)\n3: 디버그(그래프1)\n4: 디버그(그래프2)\n5: 주행 리포트",
@@ -3988,38 +3991,6 @@
       "min": 0,
       "max": 1,
       "default": 0,
-      "unit": 1
-    },
-    {
-      "group": "외부 HUD",
-      "name": "ClusterHudCoreMode",
-      "title": "외부 HUD CPU 코어 지정(0)",
-      "descr": "0: 1,2,3,4\n1: 모든 코어\n변경 시 클러스터 HUD를 재시작합니다.",
-      "egroup": "CLUSTER HUD",
-      "etitle": "External HUD CPU Core Mode(0)",
-      "edescr": "0: cores 1,2,3,4\n1: all cores\nChanging this restarts the cluster HUD process.",
-      "cgroup": "外部 HUD",
-      "ctitle": "External HUD CPU Core Mode(0)",
-      "cdescr": "0: cores 1,2,3,4\n1: all cores\nChanging this restarts the cluster HUD process.",
-      "min": 0,
-      "max": 1,
-      "default": 0,
-      "unit": 1
-    },
-    {
-      "group": "외부 HUD",
-      "name": "ClusterHudPriority",
-      "title": "외부 HUD 실시간 우선순위(10)",
-      "descr": "1-99\n기본 10\n변경 시 클러스터 HUD를 재시작합니다.",
-      "egroup": "CLUSTER HUD",
-      "etitle": "External HUD Realtime Priority(10)",
-      "edescr": "1-99\nDefault 10\nChanging this restarts the cluster HUD process.",
-      "cgroup": "外部 HUD",
-      "ctitle": "External HUD Realtime Priority(10)",
-      "cdescr": "1-99\nDefault 10\nChanging this restarts the cluster HUD process.",
-      "min": 1,
-      "max": 99,
-      "default": 10,
       "unit": 1
     },
     {

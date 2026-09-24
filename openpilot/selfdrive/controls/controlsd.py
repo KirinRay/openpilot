@@ -157,7 +157,6 @@ class Controls:
     CC.longActive = CC.enabled and not any(e.overrideLongitudinal for e in self.sm['onroadEvents']) and self.CP.openpilotLongitudinalControl
 
     actuators = CC.actuators
-    actuators.longControlState = self.LoC.long_control_state
 
     # Enable blinkers while lane changing
     if model_v2.meta.laneChangeState != LaneChangeState.off:
@@ -173,6 +172,7 @@ class Controls:
     pid_accel_limits = self.CI.get_pid_accel_limits(self.CP, CS.vEgo, CS.vCruise * CV.KPH_TO_MS)
     t_since_plan = (self.sm.frame - self.sm.recv_frame['longitudinalPlan']) * DT_CTRL
     accel, aTarget, jerk = self.LoC.update(CC.longActive, CS, long_plan, pid_accel_limits, t_since_plan, self.sm['radarState'])
+    actuators.longControlState = self.LoC.long_control_state
     actuators.accel = float(accel)
     actuators.aTarget = float(aTarget)
     actuators.jerk = float(jerk)
@@ -455,7 +455,9 @@ class Controls:
 
 
 def main():
-  config_realtime_process(4, Priority.CTRL_HIGH)
+  # Share isolated core6 with selfdrived and camerad; keep the short 100Hz
+  # control work off core4's planner/radarcan queue. Preserve FIFO53.
+  config_realtime_process(6, Priority.CTRL_HIGH)
   controls = Controls()
   controls.run()
 

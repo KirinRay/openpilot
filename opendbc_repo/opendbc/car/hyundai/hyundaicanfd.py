@@ -1,11 +1,13 @@
 import copy
 import math
 import numpy as np
-from opendbc.car import CanBusBase
+from opendbc.car import CanBusBase, DT_CTRL
 from opendbc.car.carlog import carlog
 from opendbc.car.crc import CRC16_XMODEM
 from opendbc.car.hyundai.values import HyundaiFlags, HyundaiExtFlags
+from opendbc.car.hyundai.stopping import MOVING_SPEED
 from openpilot.common.params import Params
+from openpilot.common.filter_simple import FirstOrderFilter
 from opendbc.car.common.conversions import Conversions as CV
 from openpilot.cereal import log
 
@@ -28,21 +30,25 @@ def apply_accel_jerk_limit(a_raw: float, a_value_last: float, jerk_u: float, jer
   return float(np.clip(a_raw, a_value_last - lower_step, a_value_last + upper_step))
 
 
-def apply_stopping_experiment(values, CS, controller, accel, previous_value, jerk_u, jerk_l):
+def apply_canfd_stopping(values, CS, controller, accel, previous_value, jerk_u, jerk_l):
   """Apply the stopping/re-entry sequence after the normal SCC interlocks."""
   if controller is None:
     return
 
   wheels = CS.out.wheelSpeeds
   speeds = [CS.out.vEgo, CS.out.vEgoRaw, wheels.fl, wheels.fr, wheels.rl, wheels.rr]
-  finite = all(math.isfinite(v) for v in (*speeds, accel, previous_value, jerk_u, jerk_l))
+  finite = all(math.isfinite(v) for v in (*speeds, accel, values["aReqValue"], previous_value, jerk_u, jerk_l))
   speed = max(abs(v) for v in speeds) if finite else 0.0
-  blocked = (not finite or not CS.out.canValid or CS.out.brakePressed or CS.out.gasPressed
+  soft_hold = CS.softHoldActive > 0 and CS.out.cruiseState.available
+  # Only an armed, stationary soft hold may remain active while the driver brakes.
+  # Ordinary braking and pedal input while moving keep their existing interlock.
+  brake_blocked = CS.out.brakePressed and not (soft_hold and speed <= MOVING_SPEED)
+  blocked = (not finite or not CS.out.canValid or brake_blocked or CS.out.gasPressed
              or str(CS.out.gearShifter) != "drive" or longitudinal_interlock_active(CS))
   previous_phase = controller.phase
   command = controller.update(
     active=values["ACCMode"] == 1 and not blocked, requested=bool(values["StopReq"]), speed=speed,
-    held=CS.canfdSccHoldActive, accel=accel, previous_value=previous_value,
+    held=CS.canfdSccHoldActive, accel=accel, value=values["aReqValue"], previous_value=previous_value,
     jerk_u=max(0.0, min(jerk_u, 5.0)), jerk_l=max(1.0, min(jerk_l, 5.0)),
   )
   if blocked or values["ACCMode"] != 1:
@@ -57,6 +63,7 @@ def apply_stopping_experiment(values, CS, controller, accel, previous_value, jer
     carlog.warning({"event": "carrot_stopping", "from": str(previous_phase), "phase": str(controller.phase),
                     "reason": controller.reason, "speed": speed, "aEgo": CS.out.aEgo,
                     "held": CS.canfdSccHoldActive, "retry_used": controller.retried,
+                    "soft_hold": soft_hold,
                     "StopReq": values["StopReq"], "aReqRaw": values["aReqRaw"], "aReqValue": values["aReqValue"]})
 
 
@@ -387,21 +394,58 @@ def _display_lead(radar_state):
              key=lambda lead: lead.dRel, default=None)
 
 
-def _apply_scc_lead(values, radar_state):
+def _display_lead_lateral(lead, model_v2):
+  # Model position and the cluster use right-positive y; radar yRel is left-positive.
+  lateral = -lead.yRel
+  position = getattr(model_v2, "position", None)
+  if position is not None:
+    x, y = position.x, position.y
+    if (len(x) >= 2 and len(x) == len(y)
+        and all(math.isfinite(v) for v in x) and all(math.isfinite(v) for v in y)
+        and all(x[i] > x[i - 1] for i in range(1, len(x)))):
+      lateral -= float(np.interp(lead.dRel, x, y))
+  return lateral
+
+
+class DisplayLeadLateralFilter:
+  """HUD-only path-relative lateral smoothing, updated once per control tick."""
+  def __init__(self):
+    self.filter = FirstOrderFilter(0.0, 0.4, DT_CTRL, initialized=False)
+    self.target = None
+    self.distance = None
+
+  def update(self, radar_state, model_v2=None):
+    lead = _display_lead(radar_state)
+    if lead is None:
+      self.filter.initialized = False
+      self.target = self.distance = None
+      return 0.0
+
+    # A leadOne/leadTwo role change must not reset the same radar target.
+    target = (getattr(lead, "radar", False), getattr(lead, "radarTrackId", -1))
+    # Also reject a discontinuous range jump (reused track ID / vision-only lead).
+    if target != self.target or (self.distance is not None and abs(lead.dRel - self.distance) > 5.0):
+      self.filter.initialized = False
+    self.target, self.distance = target, lead.dRel
+    return self.filter.update(_display_lead_lateral(lead, model_v2))
+
+
+def _apply_scc_lead(values, radar_state, model_v2=None, hud_lateral=None):
   lead = _display_lead(radar_state)
   # Match the stock no-object encoding; never retain an old camera target.
   values.update(ACC_ObjDist=204.6, ACC_ObjLatPos=0.0, ACC_ObjRelSpd=239.4, HUD_LEAD_INFO=0)
   if lead is not None:
     values["ACC_ObjDist"] = float(np.clip(lead.dRel, 0.1, 204.5))
-    # SCC lateral position has the opposite sign to radarState.yRel. Bound to
+    # Show the offset from the model path at the lead distance. Bound to
     # the signed 9-bit signal's representable range (0.1 scale, -20 offset).
-    values["ACC_ObjLatPos"] = float(np.clip(-lead.yRel, -45.6, 5.5))
+    lateral = _display_lead_lateral(lead, model_v2) if hud_lateral is None else hud_lateral
+    values["ACC_ObjLatPos"] = float(np.clip(lateral, -45.6, 5.5))
     values["ACC_ObjRelSpd"] = float(np.clip(lead.vRel, -170.0, 239.3))
     values["HUD_LEAD_INFO"] = 1 if lead.vRel > 0 else 2
 
 
 def create_acc_control_scc2(packer, CAN, enabled, accel_value_last, accel, stopping, gas_override, set_speed, hud_control, hyundai_jerk, CS,
-                            stop_controller=None):
+                            stop_controller=None, hud_lateral=None):
 
   if CS.scc_control is None:
     if stop_controller is not None:
@@ -413,6 +457,7 @@ def create_acc_control_scc2(packer, CAN, enabled, accel_value_last, accel, stopp
   enabled = acc_control_enabled
 
   acc_mode = 0 if not enabled else (2 if gas_override else 1)
+  previous_value = accel_value_last
 
   if hyundai_jerk.carrot_cruise == 1:
     acc_mode = 4 if enabled else 0
@@ -452,7 +497,7 @@ def create_acc_control_scc2(packer, CAN, enabled, accel_value_last, accel, stopp
   #values["SET_ME_3"] = 0x3  # objRelsped와 충돌
   values["DriveMode"] = 0 # 0: Default, 1: Comfort Mode, 2:Normal mode, 3:Dynamic mode, reserved
 
-  _apply_scc_lead(values, getattr(CS, "radarState", None))
+  _apply_scc_lead(values, getattr(CS, "radarState", None), getattr(CS, "modelV2", None), hud_lateral)
 
   values["DriverAlert"] = 0   # 1: SCC Disengaged, 2: No SCC Engage condition, 3: SCC Disenganed when the vehicle stops
 
@@ -472,12 +517,12 @@ def create_acc_control_scc2(packer, CAN, enabled, accel_value_last, accel, stopp
   values["AccelLimitBandLower"] = 0.0
 
   values["ZEROS_7"] = 0 if stop_controller is not None else 1
-  apply_stopping_experiment(values, CS, stop_controller, accel, accel_value_last, jerk_u, jerk_l)
+  apply_canfd_stopping(values, CS, stop_controller, accel, previous_value, jerk_u, jerk_l)
 
   return packer.make_can_msg("SCC_CONTROL", CAN.ECAN, values), values["aReqValue"]
 
 def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_override, set_speed, hud_control, jerk_u, jerk_l, CS,
-                       stop_controller=None):
+                       stop_controller=None, accel_value_last=None):
 
   interlock_active = longitudinal_interlock_active(CS)
   soft_hold_active = CS.softHoldActive > 0 and CS.out.cruiseState.available
@@ -517,8 +562,11 @@ def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_ov
     "ZEROS_7": 0,
   }
 
-  apply_stopping_experiment(values, CS, stop_controller, accel, accel_last, jerk_u, jerk_l)
-  return packer.make_can_msg("SCC_CONTROL", CAN.ECAN, values)
+  # accel_last is the legacy raw target, not necessarily the previous SCC
+  # output. Keep ordinary packet limiting; anchor recovery to the returned value.
+  previous_value = accel_last if accel_value_last is None else accel_value_last
+  apply_canfd_stopping(values, CS, stop_controller, accel, previous_value, jerk_u, jerk_l)
+  return packer.make_can_msg("SCC_CONTROL", CAN.ECAN, values), values["aReqValue"]
 
 
 def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
@@ -736,15 +784,21 @@ def _apply_cluster_lane_lines(values, CS, lat_active, desire):
     _apply_lane_desire(values, desire)
 
 
-def _convert_ccnc_boxes_to_cars(values):
-  # Only 0x162 uses 1/2 for gray/white boxes and 3/4 for gray/white cars.
-  # 0x1ea has different display enums; FF_DETECT_ALT has no car enum.
-  for key in ("FF_DETECT", "LF_DETECT", "RF_DETECT", "LR_DETECT", "RR_DETECT"):
-    if values[key] in (1, 2):
-      values[key] += 2
+def _normalize_cluster_corner_objects(values):
+  # Restore the legacy corner display state without blinking or clamping distance.
+  for side in ("LF", "RF", "LR", "RR"):
+    key = f"{side}_DETECT"
+    if values[key] >= 4 and values[f"{side}_DETECT_DISTANCE"] != 0:
+      values[key] = 1
 
 
-def _apply_ccnc_lead(values, radar_state, enabled):
+def _convert_ccnc_front_box_to_car(values):
+  # Preserve the current front-lead presentation independently of corner objects.
+  if values["FF_DETECT"] in (1, 2):
+    values["FF_DETECT"] += 2
+
+
+def _apply_ccnc_lead(values, radar_state, enabled, model_v2=None, hud_lateral=None):
   lead = _display_lead(radar_state)
   if lead is None:
     values.update(FF_DETECT=0, FF_DISTANCE=204.6, FF_LATERAL=0.0)
@@ -755,20 +809,22 @@ def _apply_ccnc_lead(values, radar_state, enabled):
   stock_lateral = values["FF_LATERAL"]
   if stock_lateral >= 6.4:
     stock_lateral -= 12.8
+  lateral = _display_lead_lateral(lead, model_v2)
   same_object = (values["FF_DETECT"] != 0
                  and abs(values["FF_DISTANCE"] - lead.dRel) <= 3.0
-                 and abs(stock_lateral + lead.yRel) <= 1.0)
+                 and abs(stock_lateral - lateral) <= 1.0)
   # Radar leads have no object class. Retain the OEM class only for a matching
   # target; otherwise use the existing generic gray/white car presentation.
   if not same_object:
     values["FF_DETECT"] = 4 if enabled else 3
   values["FF_DISTANCE"] = float(np.clip(lead.dRel, 0.1, 204.5))
-  values["FF_LATERAL"] = float(np.clip(-lead.yRel, -6.4, 6.3))
+  # Match the OEM object using current geometry, independently of display lag.
+  values["FF_LATERAL"] = float(np.clip(lateral if hud_lateral is None else hud_lateral, -6.4, 6.3))
 
 
 def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
                          disp_angle, left_lane_warning, right_lane_warning,
-                         enable_corner_radar, stopping, canfd_debug, paddle_mode):
+                         enable_corner_radar, stopping, canfd_debug, paddle_mode, hud_lateral=None):
   ret = []
   interlock_active = longitudinal_interlock_active(CS)
   display_lead = _display_lead(getattr(CS, "radarState", None))
@@ -949,14 +1005,16 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
         values['RIGHT_BLINK_HOLD'] = 1 if lane_changing == 4 else 0
 
         _apply_cluster_lane_lines(values, CS, lat_active, desire)
+        _normalize_cluster_corner_objects(values)
 
         ret.append(packer.make_can_msg("ADRV_0x1ea", CAN.ECAN, values, rx_counter = rx_counter))
 
       if CS.ccnc_0x162 is not None:
         values = copy.copy(CS.ccnc_0x162)
 
-        _convert_ccnc_boxes_to_cars(values)
-        _apply_ccnc_lead(values, getattr(CS, "radarState", None), CC.enabled)
+        _normalize_cluster_corner_objects(values)
+        _convert_ccnc_front_box_to_car(values)
+        _apply_ccnc_lead(values, getattr(CS, "radarState", None), CC.enabled, getattr(CS, "modelV2", None), hud_lateral)
 
         if (left_lane_warning and not CS.out.leftBlinker) or (right_lane_warning and not CS.out.rightBlinker):
           values["VIBRATE"] = 1

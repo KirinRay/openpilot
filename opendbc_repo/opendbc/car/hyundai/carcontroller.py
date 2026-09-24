@@ -2,7 +2,6 @@ from collections import deque
 
 import numpy as np
 from opendbc.can import CANPacker
-from opendbc.car.carlog import carlog
 from opendbc.car import Bus, DT_CTRL, apply_driver_steer_torque_limits, common_fault_avoidance, make_tester_present_msg, structs, apply_std_steer_angle_limits
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.hyundai import hyundaicanfd, hyundaican
@@ -184,8 +183,9 @@ class CarController(CarControllerBase):
 
     self.accel_last = 0
     self.accel_value_last = 0.0
-    # Refreshed with the other live settings in update().
-    self.canfd_stopping = CanfdStopping() if Params().get_bool("CanfdStopRetry") else None
+    self.display_lead_lateral = hyundaicanfd.DisplayLeadLateralFilter()
+    self.canfd_stopping = (CanfdStopping()
+                           if CP.flags & HyundaiFlags.CANFD and CP.openpilotLongitudinalControl else None)
     self.apply_torque_last = 0
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
@@ -236,12 +236,6 @@ class CarController(CarControllerBase):
     self.steerDeltaUpOrg = self.steerDeltaUp = self.steerDeltaUpLC = self.params.STEER_DELTA_UP
     self.steerDeltaDownOrg = self.steerDeltaDown = self.steerDeltaDownLC = self.params.STEER_DELTA_DOWN
 
-  def _update_canfd_stop_retry(self, params):
-    enabled = params.get_bool("CanfdStopRetry")
-    if enabled != (self.canfd_stopping is not None):
-      self.canfd_stopping = CanfdStopping() if enabled else None
-      carlog.warning({"event": "canfd_stop_retry_setting", "enabled": enabled})
-
   def update(self, CC, CS, now_nanos):
 
     if self.frame % 50 == 0:
@@ -283,7 +277,6 @@ class CarController(CarControllerBase):
       self.speed_from_pcm = params.get_int("SpeedFromPCM")
 
       self.canfd_debug = params.get_int("CanfdDebug")
-      self._update_canfd_stop_retry(params)
       self.camera_scc_params = params.get_int("HyundaiCameraSCC")
       self.enable_corner_radar = params.get_int("EnableCornerRadar")
       self.paddle_mode = params.get_int("PaddleMode")
@@ -530,6 +523,7 @@ class CarController(CarControllerBase):
       if self.camera_scc_params in [2, 3]:
         self.canfd_toggle_adas(CC, CS)
       if self.CP.openpilotLongitudinalControl:
+        hud_lateral = self.display_lead_lateral.update(getattr(CS, "radarState", None), getattr(CS, "modelV2", None))
         self.hyundai_jerk.make_jerk(self.CP, CS, accel, actuators, hud_control)
         self.hyundai_jerk.check_carrot_cruise(CC, CS, hud_control, stopping, accel, actuators.aTarget)
 
@@ -537,7 +531,7 @@ class CarController(CarControllerBase):
           can_sends.extend(hyundaicanfd.create_ccnc_messages(
             self.CP, self.packer, self.CAN, self.frame, CC, CS, hud_control, apply_angle,
             left_lane_warning, right_lane_warning, self.enable_corner_radar, stopping,
-            self.canfd_debug, self.paddle_mode,
+            self.canfd_debug, self.paddle_mode, hud_lateral=hud_lateral,
           ))
           if hda2:
             can_sends.extend(hyundaicanfd.create_adrv_messages(self.CP, self.packer, self.CAN, self.frame))
@@ -547,15 +541,19 @@ class CarController(CarControllerBase):
           if self.CP.flags & HyundaiFlags.CAMERA_SCC.value:
             msg, self.accel_value_last = hyundaicanfd.create_acc_control_scc2(
               self.packer, self.CAN, CC.enabled, self.accel_value_last, accel, stopping, CC.cruiseControl.override,
-              set_speed_in_units, hud_control, self.hyundai_jerk, CS, self.canfd_stopping,
+              set_speed_in_units, hud_control, self.hyundai_jerk, CS, self.canfd_stopping, hud_lateral=hud_lateral,
             )
             if msg is not None:
               can_sends.append(msg)
             can_sends.extend(hyundaicanfd.create_tcs_messages(self.packer, self.CAN, CS)) # for sorento SCC radar...
           else:
-            can_sends.append(hyundaicanfd.create_acc_control(self.packer, self.CAN, CC.enabled, self.accel_last, accel, stopping,
-                                                             CC.cruiseControl.override, set_speed_in_units, hud_control,
-                                                             self.hyundai_jerk.jerk_u, self.hyundai_jerk.jerk_l, CS, self.canfd_stopping))
+            msg, self.accel_value_last = hyundaicanfd.create_acc_control(
+              self.packer, self.CAN, CC.enabled, self.accel_last, accel, stopping,
+              CC.cruiseControl.override, set_speed_in_units, hud_control,
+              self.hyundai_jerk.jerk_u, self.hyundai_jerk.jerk_l, CS, self.canfd_stopping,
+              accel_value_last=self.accel_value_last,
+            )
+            can_sends.append(msg)
             self.accel_last = accel
       else:
         # button presses

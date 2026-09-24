@@ -197,6 +197,120 @@ def make_remote_helper(action, enabled=False):
   return helper, CS, CC
 
 
+@pytest.mark.parametrize('physical', ['setCruise', 'resumeCruise', 'accelCruise', 'decelCruise'])
+@pytest.mark.parametrize('enabled', [False, True])
+@pytest.mark.parametrize('mode', [0, 2])
+@pytest.mark.parametrize('long_press', [False, True])
+def test_vw_set_resume_are_distinct_from_speed_adjustment(physical, enabled, mode, long_press):
+  from opendbc.car.volkswagen.carstate import CarState
+  from opendbc.car.volkswagen.values import CAR
+
+  candidate = CAR.VOLKSWAGEN_ID4_MK1
+  vw = CarState(car.CarParams(carFingerprint=candidate, flags=int(candidate.config.flags), transmissionType='direct'))
+  buttons = vw.CCP.BUTTONS
+  cp = SimpleNamespace(vl={})
+  for button in buttons:
+    cp.vl.setdefault(button.can_addr, {})[button.can_msg] = 0
+  source = next(button for button in buttons if button.event_type == getattr(ButtonType, physical))
+  helper, CS, CC = make_remote_helper(None, enabled=enabled)
+  helper._cruise_button_mode = mode
+  helper._v_cruise_kph_at_brake = 95
+  helper._cruise_speed_initialized = False
+  helper._cruise_cancel_state = True
+  helper.autoCruiseControl_cancel_timer = 100
+  speed = 80
+
+  for pressed in [True] * (52 if long_press else 3) + [False]:
+    cp.vl[source.can_addr][source.can_msg] = source.values[0] if pressed else 0
+    CS.buttonEvents = vw.create_button_events(cp, buttons)
+    speed = helper._update_cruise_buttons(CS, CC, speed)
+
+  increase = physical in ('resumeCruise', 'accelCruise')
+  if physical == 'setCruise':
+    expected = 70
+  elif physical == 'resumeCruise':
+    expected = 95
+  elif long_press:
+    expected = 90 if increase else 70
+  elif not enabled:
+    expected = 95 if increase else 70
+  elif mode == 0:
+    expected = 81 if increase else 79
+  else:
+    expected = 90 if increase else 70
+  assert speed == expected
+  assert helper._v_cruise_kph_at_brake == 0
+  assert not helper._cruise_cancel_state
+  assert helper.autoCruiseControl_cancel_timer == 0
+  assert helper.button_cnt == 0
+  if not long_press or physical in ('setCruise', 'resumeCruise'):
+    assert helper._lat_enabled
+    assert helper._cruise_speed_initialized
+  assert vw.update_button_enable(CS.buttonEvents) is (physical in ('setCruise', 'resumeCruise'))
+
+  # The real release must not add another short-press speed step after a hold.
+  CS.buttonEvents = vw.create_button_events(cp, buttons)
+  assert helper._update_cruise_buttons(CS, CC, speed) == speed
+  assert not vw.update_button_enable(CS.buttonEvents)
+
+
+@pytest.mark.parametrize('enabled', [False, True])
+@pytest.mark.parametrize('initialized,saved,expected', [(True, 0, 80), (True, 60, 60), (True, 95, 95), (False, 0, 70)])
+def test_dedicated_resume_restores_saved_speed_without_increment(enabled, initialized, saved, expected):
+  helper, CS, CC = make_remote_helper(None, enabled=enabled)
+  helper._cruise_speed_initialized = initialized
+  helper._v_cruise_kph_at_brake = saved
+  CS.buttonEvents = [{'type': 'resumeCruise', 'pressed': False}]
+  assert helper._update_cruise_buttons(CS, CC, 80) == expected
+  assert helper._cruise_speed_initialized
+  assert helper._v_cruise_kph_at_brake == 0
+
+
+@pytest.mark.parametrize('physical', ['setCruise', 'resumeCruise'])
+def test_dedicated_set_resume_hold_is_one_action_on_release(physical):
+  helper, CS, CC = make_remote_helper(None, enabled=True)
+  helper._v_cruise_kph_at_brake = 95
+  CS.cruiseSpeedBigStep = True
+  CS.buttonEvents = [{'type': physical, 'pressed': True}]
+  speed = helper._update_cruise_buttons(CS, CC, 80)
+  assert speed == 80
+  CS.buttonEvents = []
+  for _ in range(200):
+    assert helper._update_cruise_buttons(CS, CC, speed) == 80
+  CS.buttonEvents = [{'type': physical, 'pressed': False}]
+  assert helper._update_cruise_buttons(CS, CC, speed) == (70 if physical == 'setCruise' else 95)
+  assert helper.button_cnt == 0
+
+
+@pytest.mark.parametrize('physical', ['setCruise', 'resumeCruise'])
+def test_dedicated_buttons_leave_hold_ready_and_carrot_modes(physical):
+  helper, CS, CC = make_remote_helper(None, enabled=True)
+  helper._soft_hold_active = 2
+  helper._cruise_ready = helper._paddle_decel_active = helper.carrot_cruise_active = True
+  CS.buttonEvents = [{'type': physical, 'pressed': False}]
+  assert helper._update_cruise_buttons(CS, CC, 80) == (70 if physical == 'setCruise' else 80)
+  assert helper._soft_hold_active == 0
+  assert not helper._cruise_ready
+  assert not helper._paddle_decel_active
+  assert not helper.carrot_cruise_active
+  assert helper._lat_enabled
+
+
+@pytest.mark.parametrize('physical,expected', [('setCruise', 70), ('resumeCruise', 95)])
+def test_explicit_set_resume_speed_wins_over_same_frame_automatic_speed(physical, expected):
+  helper, CS, CC = make_remote_helper(None, enabled=False)
+  helper._v_cruise_kph_at_brake = 95
+  CS.buttonEvents = [{'type': physical, 'pressed': False}]
+
+  def automatic_update(CS, CC, speed):
+    helper._activate_cruise = -1
+    return 40
+
+  helper._update_cruise_state = automatic_update
+  assert helper._update_cruise_buttons(CS, CC, 80) == expected
+  assert helper._activate_cruise == -1
+
+
 @pytest.mark.parametrize('action', ['accelCruise', 'decelCruise', 'accelCruiseLong', 'decelCruiseLong'])
 @pytest.mark.parametrize('auto_cruise', [0, 1])
 def test_remote_cruise_buttons_request_engagement_independently_of_auto_cruise(action, auto_cruise):

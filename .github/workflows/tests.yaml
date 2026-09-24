@@ -48,6 +48,8 @@ jobs:
       - run: ./tools/op.sh setup
       - name: Build openpilot
         run: scons
+      - name: Check passive camera SOF diagnostics
+        run: openpilot/system/camerad/test/test_camera_event_timing
       - name: Check model, monitoring and Bluetooth integration
         run: |
           python -m pytest -o addopts='' -q \
@@ -58,8 +60,15 @@ jobs:
             openpilot/selfdrive/modeld/tests/test_generic_model_runtime.py \
             openpilot/selfdrive/modeld/tests/test_dmonitoring_artifact.py \
             openpilot/selfdrive/modeld/tests/test_camera_sync.py \
+            openpilot/selfdrive/carrot/tests/test_radarcan_process.py \
+            openpilot/selfdrive/carrot/tests/test_radar_can_batch.py \
+            openpilot/selfdrive/carrot/tests/test_radar_cutout_fast_path.py \
+            openpilot/selfdrive/carrot/tests/test_cluster_performance_safeguards.py \
+            openpilot/selfdrive/carrot/tests/test_cluster_autorun.py \
+            openpilot/selfdrive/controls/tests/test_leads.py \
             openpilot/selfdrive/carrot/bluetooth/tests \
             openpilot/selfdrive/car/tests/test_carrot_cruise_buttons.py \
+            opendbc_repo/opendbc/car/volkswagen/tests/test_carstate_buttons.py \
             openpilot/selfdrive/controls/tests/test_desire_helper.py \
             openpilot/system/tests/test_c3_agnos_manifest.py
 
@@ -71,4 +80,4 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - run: node --test openpilot/selfdrive/carrot/web/tests/bluetooth_mapping.test.mjs openpilot/selfdrive/carrot/web/tests/egpu_model.test.mjs
+      - run: node --test openpilot/selfdrive/carrot/web/tests/bluetooth_mapping.test.mjs openpilot/selfdrive/carrot/web/tests/egpu_model.test.mjs openpilot/selfdrive/carrot/web/tests/viewport_keyboard.test.mjs openpilot/selfdrive/carrot/web/tests/settings_parent_navigation.test.mjs

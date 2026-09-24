@@ -115,28 +115,33 @@ Range 400–1000 cm, step 10 cm. The code divides by 100 and uses it as the fixe
 
 It is therefore not the actual moving following distance. Its direct effect is clearest near zero speed behind a stopped lead. When there is no active `leadOne` but the camera model consistently associates a stationary vehicle with the E2E stop endpoint, the planner first corrects that endpoint toward the inferred vehicle position and then applies this fixed clearance. No SCC/radar object is created. Although the catalog description says “stop position ×0.8,” the running code does not apply 0.8.
 
-### Fixed stopping acceleration
+### `StoppingAccel` · Stopping acceleration
 
-Stopping acceleration is fixed at `-0.50 m/s²` (formerly stored as `-50`) for all brands and is no longer adjustable in settings. Existing `StoppingAccel` values, including `0` and other negative values, are ignored.
+Default `-50`, range `-100 to -50`, step `10`. `-50` means `-0.50 m/s²`; `-100` means `-1.00 m/s²`. It is used across brands when openpilot controls longitudinal motion and does not directly control stock ACC longitudinal operation.
 
-This value sets the stop-entry acceleration threshold and the target used when gradually increasing braking in normal stopping state. Stronger braking already in progress is retained, and soft hold continues to use the vehicle-specific stationary-hold acceleration. This value does not directly control acceleration or braking when stock ACC is responsible.
+The original behavior enters stopping after `shouldStop` when actual acceleration exceeds the setting. Existing state-transition exceptions, including a nearby lead, remain. During stopping, requests weaker than the target become more negative at the vehicle's stopping rate; stronger requests are retained. Soft hold uses the vehicle-specific stationary-hold acceleration.
 
-### CANFD Stop Retry (Experimental) · `CanfdStopRetry`
+- **Raise it (toward −50):** requests weaker deceleration and delays the ordinary acceleration-based handover to stopping.
+- **Lower it (toward −100):** requests stronger deceleration and advances that handover. It can increase stopping impact.
 
-Available under Vehicle & Hardware → CANFD·HDA, with **OFF** as the default. Applies only to Hyundai/Kia CANFD with openpilot longitudinal control. Changes apply during driving within about 0.5 seconds without rebooting. Retry state resets only when switching ON or OFF; leaving the setting unchanged preserves an ongoing retry.
+Changes apply within about one second, including while driving. Stronger output already reached during a stop is retained, so selecting a weaker target does not immediately reduce braking. Control clamps old or directly written out-of-range values to the range endpoints; unreadable values use the default.
 
-- **OFF:** Retains existing stop requests, negative acceleration requests, InfoDisplay, and byte7 handling.
-- **ON:** Sends StopReq=1 with aReq=0 during low-speed stop requests and sets InfoDisplay and byte7 to zero. The lower band uses a fixed experimental value of 0.20 during stop requests, without copying stock SCC values.
-- If motion persists, releases StopReq, requests negative acceleration, then reasserts once. If the retry still fails, retains negative acceleration requests without repeated toggling. Driver pedal input, cruise disengagement, and interlocks such as Auto Hold cancel retries.
+<a id="canfd-stopping"></a>
+### CANFD stopping and retry
 
-The fixed stopping acceleration above still applies. When enabled, the CAN output stage substitutes zero acceleration during stop requests; recovery requests the stronger deceleration of the existing request and -0.50 m/s².
+Retry runs by default on Hyundai/Kia CANFD with openpilot longitudinal control. There is no separate setting, and the removed `CanfdStopRetry` value is not read. Conventional CAN vehicles and stock ACC longitudinal control are outside its scope.
+
+- Stop intent and acceleration use the original control path. The additional one-second stop preview, forced convergence to -0.50 m/s² after StopReq, and two-frame soft-hold preparation are removed.
+- While StopReq is active, aReqRaw follows control with `StoppingAccel`, and aReqValue uses normal packet limiting. InfoDisplay and byte7 remain zero; the lower band uses a fixed experimental value of 0.20 without copying stock SCC values.
+- If motion persists, releases StopReq and requests the stronger deceleration of the existing request and -0.50 m/s², then reasserts once. If motion persists after retry, retains negative acceleration requests without repeated toggling.
+- Accelerator input, cruise disengagement, and interlocks such as Auto Hold cancel it. Requests while the brake is pressed are allowed only for an armed soft hold with every speed input at or below 0.10 m/s.
 
 > [!CAUTION]
-> Complete stopping and collision prevention have not been established across vehicles. Validate only in a controlled area where you can brake directly. Switch OFF to restore the previous method at the next settings refresh. Switching while stopped also changes the transmitted requests, so change it only when prepared to brake directly.
+> Retry does not guarantee complete stopping or collision prevention across vehicles. Any reduction in stopping impact also requires vehicle validation.
 
 ### `VEgoStopping`
 
-Range 1–100, step 5. A value of 50 is 0.50 m/s (about 1.8 km/h). `shouldStop` becomes true when both the planner's current and one-second-ahead target speeds are below this threshold.
+Range 1–100, step 5. A value of 50 is 0.50 m/s (about 1.8 km/h). `shouldStop` becomes true when both the planner's target speeds at the control-delay horizon and one second later are below this threshold.
 
 Lowering it delays stop recognition and may release stop state sooner on departure. Raising it enters stop state earlier but can make departure feel sluggish.
 

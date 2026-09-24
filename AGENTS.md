@@ -1,5 +1,180 @@
 # Repository memory
 
+- On 2026-09-23, Ioniq 5 C4 `00000594--abf5912e57--7` on 1fbfe331 reproduced
+  a 102.044 ms wide-camera BOOT_TS gap with consecutive raw-derived frame and
+  request IDs, one skipped model input and about 304 ms invalid pose inputs.
+  BOOT_TS is sampled in kernel SOF handling, not an independent sensor clock;
+  do not claim a physical sensor or UI cause from this log. Separately, startup
+  expected a 25 ms driver offset although bundled Panda still drives all FSIN
+  channels in phase from TIM1. Driver staggered_sof is now false, retaining
+  the strict startup tolerance and all runtime validity/scheduling policies.
+  Passive SOF/receive timing logs are bounded to one per second per camera.
+  The startup fix is not a demonstrated fix for the later driving gap; C3/C4
+  target validation remains required. See docs/camera_sof_gap_20260923.md.
+
+- On 2026-09-23, Group1 video/CAN comparisons showed reversed front lateral
+  coordinates on one Tucson and one Sportage, but normal left/right on a
+  Staria; another Sportage was inconclusive. Do not infer upside-down mounting
+  or automatically invert a whole model/group. The user approved RadarTrackFlip:
+  default normal, manually invert frontRadar yRel/yvRel per vehicle at the next
+  onroad start. Preserve SCC/corner/vision and scheduling. liveTracks records
+  radarTrackFlipped; replay must avoid double inversion and preserve recorded
+  leads. NAS recorded/normal/flipped choices are analysis-only. See
+  docs/radar_track_flip.md for offline verification and vehicle-validation limits.
+
+- On 2026-09-23, the user approved the parked display-placement candidate:
+  onroad main UI core6 and USB cluster core7, both SCHED_OTHER/nice19;
+  offroad both return to cores0..3 before big-core power saving. This supersedes
+  the UI-little placement below. Keep camera/control/model/radar priorities and
+  placement unchanged. Apply the display policy to all workers, including the
+  software encoder child. USB render/encode/controller rate is fixed at10 FPS,
+  or5 while UsbGpuActive; removed ClusterHudLiveFps/ClusterHudCoreMode and legacy
+  FPS/core environment overrides must not restore custom placement/rates.
+  DM-enabled parked UI6/cluster7 measured core2/6/7 means61.7/77.6/85.2%, UI19.77Hz,
+  road/wide max48.73/49.02ms, no camera/model/DM gaps or pose/CAN invalidity.
+  Core7 still briefly reached100%; C3, loaded driving and actual ignition-off
+  hotplug remain unvalidated. Isolated device syscalls verified nice19 and
+  core6/7-to-little restoration for threads and a child under comma credentials.
+  See docs/camera_core5_trial.md for comparisons and limits.
+
+- On 2026-09-22, the user reported near-idle core6 and busy cores4/5 after
+  camera reservation and requested balanced placement. Whole-core /proc/stat
+  and deviceState, including background work, confirmed core4 about91%.
+  Earlier selected-process CPU sums did not establish total core headroom.
+  New parked C4 A/B/A trials place controlsd/selfdrived together on core6
+  FIFO53 with camerad SCHED_OTHER. Keep planner/radarcan core4 FIFO51,
+  card core5 FIFO53, radard core5 FIFO51, model/DM core7, and UI little/normal.
+  This supersedes the camera-exclusive and control-core4 placements below.
+  Both-controls trial core4/5/6/7 means were59/63/54/48%; camera road/wide max
+  rose to47.261/49.151ms while planner work max fell to8.613ms and radar input
+  age max to13.360ms. No model/pose/CAN failure occurred. Core4 still briefly
+  reached100%; parked timing is not proof of loaded driving or C3 behavior.
+  Follow-up temporarily enabled DM:90s yielded1804 valid DM frames with no
+  DM/driving-model skips or pose/CAN failures, whole-core means61/71/46/69%,
+  road/wide max51.370/52.838ms. DisableDM was restored to2 afterwards.
+  Preserve priorities and validity thresholds. See docs/camera_core5_trial.md.
+
+- On 2026-09-22, after three parked C4 grouping comparisons, the user approved
+  leaving camerad/camera IRQ on core6, moving card to core5 FIFO53 with radard
+  FIFO51, and moving planner to core4 FIFO51 with radarcan below the unchanged
+  controlsd/selfdrived FIFO53. This supersedes the card/planner placements in
+  earlier entries. Camera/UI remain SCHED_OTHER; model/DM stay on core7.
+  The selected 60-second trial reduced road/wide maximum ages to 36.889/37.335ms
+  but increased planner maximum work from about 8ms to 19ms and radar input
+  maximum age from about 15ms to 25ms. No CAN/pose/model-gap failure occurred.
+  DM was disabled; loaded driving, DM-enabled behavior and C3 are unvalidated.
+  Core6 is reserved by application placement, not free of all kernel/IRQ work.
+  Preserve pose limits and radar semantics. See docs/camera_core5_trial.md.
+
+- On 2026-09-22, parked Ioniq 5 C4 follow-up reproduced a 91.961ms road-camera
+  delay, model input frame gap and invalid odometry/pose inputs with ftrace off;
+  IMU ages stayed below 34ms. Live boot args isolate only cores6..7. Kernel
+  tracing on core5 verified ready-camera scheduling delays behind normal
+  proclogd/kswapd work and FIFO planner/radard. The high-reclaim trace also had
+  diagnostic tmpfs overhead; do not treat its frequency as an unperturbed result.
+  The camera/IRQ core5 trial below is rolled back to core6, retaining UI on
+  cores0..3 and camera/UI SCHED_OTHER. A short 5/6/5 parked comparison reduced
+  core6's observed tail/runqueue wait but added about 3ms mean camera age.
+  A nice=-10 trial did not materially improve mean/p99; keep nice0. Preserve
+  other process placements and pose limits. This is a measured mitigation, not
+  proof of a driving fix, C3 benefit or the cause of earlier SOF/IFE faults.
+  See docs/camera_core5_trial.md for evidence and limitations.
+
+- On 2026-09-22, PV5 follow-up `0000022a--99e06b0cc0--17` disproved
+  interpreting A-CAN 0x380 bit 6 falling as camera passage: roughly 4.7 s
+  notification pulses ended while MapSource=2 and a 30 km/h camera still
+  had 139 m of tracked distance. Do not use that edge or byte value 0x04 as
+  proof of passage. Retain a matched PV5 camera only while fresh messages
+  confirm the same MapSource=2 enforcement limit. End/change/invalidity or
+  more than one second of message loss clears current and queued cameras;
+  cached profiles cannot reinsert them. Queued previews alone never authorize
+  PV5 camera control. Consume a completed camera's unchanged map warning;
+  a new warning without a new matched profile uses a separate virtual distance.
+  PV5 does not decode current-route/position 0x4B9/0x4B4: do not claim that
+  generic route-reset code detects its departure. If stock enforcement remains
+  unchanged after a turn, this cancellation cannot detect that turn independently.
+  Follow-up replay reconstructs initial targets from logged distances because
+  the preceding segment is unavailable; current cancellation drops those old
+  previews and uses the warning's virtual distance at the reported pulse end.
+  Cancellation/recovery/completion tests are synthetic, not vehicle validation.
+  Earlier bit-transition tests did not establish physical passage semantics.
+
+- On 2026-09-21, after Ioniq 5 C4 `00000f90--96d7dcd525--4` reproduced a
+  101 ms wide-camera SOF gap, the user authorized a CPU-placement trial:
+  main UI uses cores0..3 with SCHED_OTHER (core0 bootstrap), camerad and its
+  camera IRQ targets move from core6 to core5. card remains core6 FIFO53;
+  planner/radard remain core5 FIFO51 and camera keeps normal scheduling.
+  Preserve the UI's verified SCHED_OTHER contract and pose validity limits.
+  This supersedes the camera/UI placements described in older observations,
+  not radar isolation or cluster affinity. No C3/C4 vehicle benefit is yet
+  validated; do not claim same-core contention caused the camera fault.
+  See docs/camera_core5_trial.md for scope, trade-offs and validation.
+
+- On 2026-09-21, ID.4 replay showed that adding CP.radarDelay (0.8 s) to
+  distance alignment could switch the selected lead to a farther CAN object.
+  The user approved zero extra distance projection for VW MEB. Use the shared
+  radar_motion/timing.py policy in runtime and NAS replay; preserve measured
+  camera/publication skew. Do not also zero CP.radarDelay: its ego-history
+  compensation and velocity/acceleration effects have not been recalibrated.
+  Other platforms retain their existing delay. See
+  docs/meb_radar_distance_alignment.md for scope and regression evidence.
+
+- On 2026-09-21, K9 C4 logs reproduced locationd timing-check invalidity from
+  repeated IMU timestamps over 100 ms old. Historical captures first showed
+  these failures after the September 19 update, despite unchanged HUD 10 FPS,
+  cores 1..4 and FIFO 10. The user authorized normal SCHED_OTHER scheduling for
+  cluster autorun/render workers so sensord FIFO 1 and other realtime work
+  take precedence. Keep legacy ClusterHudPriority/environment overrides from
+  restoring FIFO; retain FPS and core selection. This is a contention mitigation,
+  not a proved fix for the OS/runtime regression. Do not weaken pose validity
+  thresholds or claim vehicle validation from desktop tests. Official 521db4c
+  changes initial gyro-bias covariance, not the observed sensor timestamp delays.
+
+- On 2026-09-21 the user authorized radar optimization and preprocessing
+  isolation to reduce card/camerad contention on core6, with mandatory radar
+  regression validation. RadarInterface/liveTracks now belong to radarcan on
+  core4 FIFO51 (below controlsd/selfdrived FIFO53); card remains core6 FIFO53,
+  model-driven radard/planner core5. Preserve carState.radarInput batch metadata
+  and non-conflated CAN/ego joining: using an arbitrary latest ego sample breaks
+  delay/filter cadence. Keep planner's existing fast liveTracks path during this
+  first isolation step. See docs/radar_process_isolation.md for equivalence,
+  corpus failures and limits. C3/C4 device timing/camera improvements are NOT
+  yet validated. Never present same-core contention as a proved IFE root cause
+  or desktop speedup as a vehicle result. Radar changes also require NAS replay
+  deployment and actual result verification below.
+
+- On 2026-09-20, EV9 `3eef70e8fb92485c` (tizi/C3 family) reproduced Cinque v3
+  dropped-frame odometry invalidity even with `xiaoge_data` stopped. Raw-image
+  upload averaged 24.75 ms and model execution 50.69 ms; C4 `07b62e389ed26c81`
+  used the same artifact at 13.94 ms upload / 39.73 ms execution. Old TG code
+  warped on QCOM before transferring model-sized images, whereas generic v3
+  uploads full NV12 images before AMD warp. The user approved C3-only QCOM
+  pre-upload warp while retaining the existing C4 path. See
+  `docs/c3_preupload_warp.md` for implementation, validation limits and evidence.
+  EV9 segment `000002c9--15d447d91b--0` on 9a349b60 failed the QCOM/AMD pixel
+  comparison and fell back to AMD (7,471,616 USB bytes, about 24.8 ms upload).
+  At that stage the optimization was NOT confirmed active. Diagnose the
+  per-probe mismatch details before changing warp math or acceptance criteria.
+  Follow-up `000002ca--50469cb155--0` on 820f82ea found 16 repeat-stable
+  projective-only mismatches; all eight logged samples reconstruct as adjacent
+  source pixels at half-pixel rounding boundaries. Validation now checks each
+  mismatch against correct-camera/plane NV12 source values within 0.00025
+  source pixels of a rounding boundary. Do not replace this with a percentage
+  or intensity tolerance. On 2026-09-21, EV9 `000002cc--03d0a44f7d--10`
+  on 2723a8eb confirmed QCOM active: 393,728 USB bytes, 5.36 ms upload,
+  34.98 ms mean model execution. Four remaining warnings matched complete
+  camera streams with 12.6-13.2 ms SOF skew: Carrot's strict 10 ms pairing
+  discarded four main frames. Current pairing allows at most 20 ms skew;
+  metadata replay retains all 1,200 EV9 pairs while preserving real Ioniq
+  phase-slip/IFE-loss gaps. This is not on-device validation of the pairing fix.
+  Official v3 also publishes invalid odometry after a real main-frame gap;
+  do not describe this policy as a Carrot-only regression. Official pairing
+  logs >10 ms skew but proceeds; Carrot still bounds large/stale pairs.
+  Preserve official model input/outputs and recurrent state; never hide overload
+  by weakening pose validity. Evaluate model/runtime updates per device family;
+  do not assume C4 validation covers C3, or automatically freeze all C3 models.
+  Keep World Model experiments local and apply its separate validation rules.
+
 - As of 2026-09-20, the user requested deletion of the remote `carrot-worldmodel`
   branch to prevent others from installing an unfinished experiment. Keep this
   experiment local only; do not recreate or push its remote branch unless the

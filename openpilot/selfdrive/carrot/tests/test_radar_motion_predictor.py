@@ -3227,6 +3227,35 @@ def test_controller_releases_paired_cutin_that_will_pass_before_entry(monkeypatc
   assert selected and rejected
 
 
+@pytest.mark.parametrize("side", (-1, 1))
+def test_controller_clears_stationary_pair_motion_disagreement_without_l2_hold(side) -> None:
+  controller = DPathRadarController(prefer_corner_radar=True)
+  selected = False
+  risk_seen = False
+  for index in range(16):
+    time_s = index * 0.05
+    distance = 13.0 - 4.8 * time_s
+    output = controller.update(
+      time_s, 6.0,
+      (
+        Point(36, 25.0, 0.0, v_lead=6.0),
+        Point(52, distance, side * 3.9, v_rel=-5.7, v_lead=0.3),
+        Point(2302, distance, side * (5.0 - 2.0 * time_s), v_rel=-4.8, v_lead=1.2,
+              yv_rel=-side * (0.3 if index < 12 else 0.05), source="corner235", trackState=2),
+      ),
+      model_with_lead(25.0, 0.0, 6.0),
+    )
+    if index < 12:
+      selected |= output.lead_two is not None
+      risk_seen |= output.lead_cutin_risk is not None
+    else:
+      assert selected and risk_seen
+      assert any(e.stationary_pair_alias for e in controller.trajectory_cutin.last_estimates)
+      assert output.lead_two is None
+      assert not output.leads_cutin
+      assert output.lead_cutin_risk is None
+
+
 def test_corner_cutin_predecel_requires_continuous_confirmation() -> None:
   tracker = CornerCutInPredecelTracker(confirmation_s=0.10, hold_s=0.20)
   candidate = RadarMotionCutIn(SimpleNamespace(
@@ -4181,6 +4210,72 @@ def test_stationary_radar_rejects_fast_vision_speed_mismatch() -> None:
 
   assert match is None
   assert matcher.stationary_identity is None
+
+
+@pytest.mark.parametrize("mode", (1, 2, 3))
+def test_front_position_history_promotes_without_corner_or_second_dwell(mode: int) -> None:
+  controller = DPathRadarController(enable_radar_tracks=mode)
+  for index in range(7):
+    time_s = index * 0.05
+    distance = 100.0 - 22.0 * time_s
+    model = model_with_lead(distance, 0.1, 16.0, probability=0.75 if index == 0 else 0.85)
+    model.leadsV3[0].vStd = (4.5,)
+    output = controller.update(
+      time_s=time_s, v_ego=22.0,
+      radar_points=(Point(51, distance, 0.1, v_rel=-22.0, trackState=2),),
+      model=model, yaw_rate_rad_s=0.03,
+    )
+    assert output.lead_one is not None
+    if index < 5:
+      assert output.lead_one["radarTrackId"] == -1
+    else:
+      assert output.lead_one["radarTrackId"] == 51
+      assert output.lead_one["vLead"] == pytest.approx(0.0)
+      assert not controller.primary_matcher.stationary_corner_supported
+
+
+@pytest.mark.parametrize("broken_evidence", (
+  "probability_gap", "position_gap", "range_jump", "radar_dropout", "weak_track",
+  "lateral_gap", "tight_turn", "precise_speed", "moving_competitor", "weak_confirmation", "reset",
+))
+def test_front_position_history_requires_continuous_uncontested_evidence(broken_evidence: str) -> None:
+  controller = DPathRadarController(enable_radar_tracks=2)
+  for index in range(7):
+    time_s = index * 0.05
+    distance = 100.0 - 22.0 * time_s
+    probability = 0.85
+    vision_distance = distance
+    radar_distance = distance
+    y_rel = 0.1
+    track_state = 2
+    yaw_rate = 0.03
+    if index == 3:
+      if broken_evidence == "probability_gap":
+        probability = 0.69
+      elif broken_evidence == "position_gap":
+        vision_distance += 6.0
+      elif broken_evidence == "lateral_gap":
+        y_rel = 1.5
+      elif broken_evidence == "weak_track":
+        track_state = 1
+      elif broken_evidence == "tight_turn":
+        yaw_rate = 0.11
+      elif broken_evidence == "reset":
+        controller.primary_matcher.reset()
+    if broken_evidence == "range_jump" and index >= 3:
+      radar_distance += 1.0
+    if broken_evidence == "weak_confirmation" and index >= 5:
+      probability = 0.79
+    model = model_with_lead(vision_distance, 0.1, 16.0, probability=probability)
+    model.leadsV3[0].vStd = (1.5 if broken_evidence == "precise_speed" else 4.5,)
+    points = [Point(51, radar_distance, y_rel, v_rel=-22.0, trackState=track_state)]
+    if broken_evidence == "radar_dropout" and index == 3:
+      points = []
+    if broken_evidence == "moving_competitor":
+      points.append(Point(77, distance + 1.0, 0.1, v_rel=-6.0, trackState=2))
+    output = controller.update(time_s=time_s, v_ego=22.0, radar_points=points,
+                               model=model, yaw_rate_rad_s=yaw_rate)
+    assert output.lead_one is None or output.lead_one["radarTrackId"] != 51
 
 
 def test_stationary_front_position_lock_recovers_model_speed_error() -> None:
@@ -8098,6 +8193,31 @@ def test_stale_radar_publication_is_rejected_before_delay_projection() -> None:
     v_ego=20.0,
     radar_to_model_time_s=-0.8,
   ) == ()
+
+
+def test_meb_distance_alignment_keeps_near_lead_without_extra_projection() -> None:
+  from openpilot.selfdrive.carrot.radar_motion.timing import front_radar_distance_delay_s, VOLKSWAGEN_MEB_FLAG
+
+  cp = SimpleNamespace(brand="volkswagen", flags=VOLKSWAGEN_MEB_FLAG, radarDelay=0.8)
+  points = (Point(613, 21.9375, 0.0, v_rel=-6.5), Point(619, 29.625, 0.0, v_rel=-7.75))
+  model = model_with_lead(22.8867, 0.0, 0.441, probability=1.0)
+  chosen = []
+  for delay in (front_radar_distance_delay_s(cp), cp.radarDelay):
+    controller = DPathRadarController(enable_radar_tracks=1, front_radar_measurement_delay_s=delay)
+    output = controller.update(10.0, 6.5, points, model, radar_to_model_time_s=-0.06)
+    assert output.lead_one is not None
+    chosen.append(output.lead_one["radarTrackId"])
+  assert chosen == [613, 619]
+
+  # Zero extra delay retains measured publication/exposure skew and kinematics.
+  aligned = DPathRadarController(front_radar_measurement_delay_s=front_radar_distance_delay_s(cp))._points_at_model_time(
+    (Point(613, 21.9375, 0.0, v_rel=-6.5, v_lead=0.7, a_lead=-0.2),),
+    v_ego=6.5, radar_to_model_time_s=-0.06,
+  )[0]
+  assert aligned.d_rel == pytest.approx(21.9375 + 6.5 * 0.06)
+  assert aligned.v_rel == pytest.approx(-6.5)
+  assert aligned.v_lead == pytest.approx(0.0)  # Existing vEgo + vRel policy.
+  assert aligned.a_lead == pytest.approx(-0.2)
 
 
 def test_mode_three_uses_scc_at_any_speed_when_front_omits_lead() -> None:
